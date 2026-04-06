@@ -1,0 +1,54 @@
+/* Trending Carousel Styles */
+
+.carouselWrapper {
+  position: relative;
+  width: 100%;
+}
+
+.carouselContainer {
+  position: relative;
+  padding-top: 4rem;
+  padding-bottom: 4rem;
+  margin-top: -4rem;
+  margin-bottom: -4rem;
+  overflow: visible;
+}
+
+.emblaViewport {
+  overflow-x: hidden;
+  overflow-y: visible;
+  margin-left: -0.5rem;
+  margin-right: -0.5rem;
+  padding-left: 0.5rem;
+  padding-right: 0.5rem;
+}
+
+.emblaContainer {
+  display: flex;
+  margin-left: -0.5rem;
+}
+
+@media (min-width: 768px) {
+  .emblaContainer {
+    margin-left: -1rem;
+  }
+}
+
+.carouselItem {
+  position: relative;
+  min-width: 0;
+  flex: 0 0 auto;
+  padding-left: 0.5rem;
+  transition: z-index 0s;
+}
+
+@media (min-width: 768px) {
+  .carouselItem {
+    padding-left: 1rem;
+  }
+}
+
+/* Z-index handling for hover */
+.carouselItem:hover {
+  z-index: 100;
+}
