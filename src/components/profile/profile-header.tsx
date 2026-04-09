@@ -16,16 +16,10 @@ export function ProfileHeader() {
   const userEmail = user?.email || "";
   const userAvatar = user?.avatar;
 
-  // Listen for user updates to refresh avatar
   useEffect(() => {
-    const handleUserUpdate = () => {
-      setImageError(false);
-      setAvatarKey((prev) => prev + 1); // Force re-render of Image component
-    };
-
-    window.addEventListener("user-updated", handleUserUpdate);
-    return () => window.removeEventListener("user-updated", handleUserUpdate);
-  }, []);
+    setImageError(false);
+    setAvatarKey((prev) => prev + 1);
+  }, [userAvatar]);
 
   return (
     <div className="flex items-center justify-between mb-12">

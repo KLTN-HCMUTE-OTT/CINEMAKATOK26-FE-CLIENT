@@ -21,6 +21,7 @@ import {
   reviewReplyControllerGetRepliesForReview,
   reviewReplyControllerGetRepliesForEpisodeReview,
 } from "@/apis/api/reviewReplies";
+import { useUIStore } from "@/store";
 
 interface ReplyItemProps {
   reply: API.ReviewReplyDto;
@@ -51,12 +52,13 @@ export function ReplyItem({
   replyType = "review",
   container,
 }: ReplyItemProps) {
+  const openLoginModal = useUIStore((s) => s.openLoginModal);
   const [isEditing, setIsEditing] = useState(false);
   const [editContent, setEditContent] = useState(reply.content);
   const [isReplying, setIsReplying] = useState(false);
   const [replyContent, setReplyContent] = useState("");
   const [fetchedReplyCount, setFetchedReplyCount] = useState<number | null>(
-    null
+    null,
   );
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [reportDialogOpen, setReportDialogOpen] = useState(false);
@@ -118,7 +120,7 @@ export function ReplyItem({
             "[ReplyItem] Force fetched count:",
             data,
             "extracted:",
-            count
+            count,
           );
           setFetchedReplyCount(count);
         } catch (error) {
@@ -142,7 +144,7 @@ export function ReplyItem({
       "force:",
       force,
       "type:",
-      replyType
+      replyType,
     );
     setLoadingNested(true);
     try {
@@ -201,14 +203,14 @@ export function ReplyItem({
       // Force refresh count to update the badge immediately
       console.log(
         "[ReplyItem] handleReply - forcing count refresh for:",
-        reply.id
+        reply.id,
       );
       setForceRefreshCount((prev) => prev + 1);
 
       // Always force refetch nested replies to show the new one and maintain expand state
       console.log(
         "[ReplyItem] Force refetching nested replies, wasExpanded:",
-        wasExpanded
+        wasExpanded,
       );
       setNestedReplies([]);
       await fetchNestedReplies(true); // Force refetch
@@ -225,7 +227,7 @@ export function ReplyItem({
   const handleReplyClick = () => {
     if (!currentUserId) {
       toast.error("Please login to reply");
-      window.dispatchEvent(new Event("open-login-modal"));
+      openLoginModal(container);
       return;
     }
     setIsReplying(!isReplying);

@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { actorControllerGetTopActors } from "@/apis/api/actors";
+import { actorsControllerGetTopActors } from "@/apis/api/actors";
 
 interface Actor {
   id: string;
@@ -24,7 +24,7 @@ export function useTopActors(options: UseTopActorsOptions = {}) {
         setIsLoading(true);
         setError(null);
 
-        const response = await actorControllerGetTopActors({
+        const response = await actorsControllerGetTopActors({
           limit,
         });
 

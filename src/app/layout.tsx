@@ -5,6 +5,8 @@ import "./globals.css";
 import ScrollToTopButton from "@/components/ui/scroll-to-top-button";
 import { GoogleOAuthProvider } from "@react-oauth/google";
 import { Toaster } from "sonner";
+import { env } from "@/env";
+import { StoreHydrator } from "@/store/store-hydrator";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -27,9 +29,8 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={`${inter.variable} font-sans antialiased`}>
-        <GoogleOAuthProvider
-          clientId={process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || ""}
-        >
+        <GoogleOAuthProvider clientId={env.NEXT_PUBLIC_GOOGLE_CLIENT_ID}>
+          <StoreHydrator />
           {children}
           <Analytics />
           <ScrollToTopButton />

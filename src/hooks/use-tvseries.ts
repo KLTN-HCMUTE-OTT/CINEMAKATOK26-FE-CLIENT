@@ -3,10 +3,10 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
-  tvSeriesControllerFindAll,
-  tvSeriesControllerFindOne,
-  tvSeriesControllerGetTrendingSeries,
-  tvSeriesControllerGetTvSeriesByCategoryId,
+  tvSeriesControllerGetTvSeries,
+  tvSeriesControllerGetTvSeriesById,
+  tvSeriesControllerGetTrendingTvSeries,
+  tvSeriesControllerGetTvSeriesByCategory,
 } from "@/apis/api/tvSeries";
 import { toast } from "sonner";
 
@@ -28,7 +28,7 @@ const DEFAULT_LIST_ERROR = "Không thể tải danh sách TV Series";
 const DEFAULT_DETAIL_ERROR = "Không thể tải thông tin TV Series";
 
 type TVSeriesFetchFunction = (
-  params: any
+  params: any,
 ) => Promise<{ data: API.TVSeriesSummaryDtoPaginatedResponseDto }>;
 
 /**
@@ -37,7 +37,7 @@ type TVSeriesFetchFunction = (
 function useTvSeriesFetch(
   fetchFn: TVSeriesFetchFunction,
   params: any,
-  errorMessage: string
+  errorMessage: string,
 ): UseTvSeriesListResult {
   const [result, setResult] =
     useState<API.TVSeriesSummaryDtoPaginatedResponseDto | null>(null);
@@ -89,12 +89,12 @@ function useTvSeriesFetch(
  * Hook to fetch all TV series
  */
 export function useTvSeriesList(
-  params?: API.TvSeriesControllerFindAllParams
+  params?: API.TvSeriesControllerGetTvSeriesParams,
 ): UseTvSeriesListResult {
   return useTvSeriesFetch(
-    tvSeriesControllerFindAll,
+    tvSeriesControllerGetTvSeries,
     params,
-    DEFAULT_LIST_ERROR
+    DEFAULT_LIST_ERROR,
   );
 }
 
@@ -102,12 +102,12 @@ export function useTvSeriesList(
  * Hook to fetch trending TV series
  */
 export function useTVSeriesTrending(
-  params?: API.TvSeriesControllerGetTrendingSeriesParams
+  params?: API.TvSeriesControllerGetTrendingTvSeriesParams,
 ): UseTvSeriesListResult {
   return useTvSeriesFetch(
-    tvSeriesControllerGetTrendingSeries,
+    tvSeriesControllerGetTrendingTvSeries,
     params,
-    "Không thể tải TV Series đang thịnh hành"
+    "Không thể tải TV Series đang thịnh hành",
   );
 }
 
@@ -116,16 +116,20 @@ export function useTVSeriesTrending(
  */
 export function useTvSeriesByCategory(
   categoryId: string,
-  params?: API.TvSeriesControllerFindAllParams
+  params?: Omit<
+    API.TvSeriesControllerGetTvSeriesByCategoryParams,
+    "categoryId"
+  >,
 ): UseTvSeriesListResult {
   // Chỉ tạo object fetchParams nếu params đầu vào không phải là undefined
-  const fetchParams =
-    params === undefined ? undefined : { ...params, categoryId };
+  const fetchParams:
+    | API.TvSeriesControllerGetTvSeriesByCategoryParams
+    | undefined = params === undefined ? undefined : { ...params, categoryId };
 
   return useTvSeriesFetch(
-    tvSeriesControllerGetTvSeriesByCategoryId,
+    tvSeriesControllerGetTvSeriesByCategory,
     fetchParams, // Truyền fetchParams đã được kiểm tra
-    "Không thể tải TV Series theo thể loại"
+    "Không thể tải TV Series theo thể loại",
   );
 }
 
@@ -148,7 +152,7 @@ export function useTvSeriesDetail(id?: string): UseTvSeriesDetailResult {
     setError(null);
 
     try {
-      const response = await tvSeriesControllerFindOne({ id });
+      const response = await tvSeriesControllerGetTvSeriesById({ id });
 
       if (response?.data?.data) {
         setResult(response.data.data);
@@ -198,17 +202,17 @@ export function useTvSeriesData({
 }: UseTvSeriesDataParams): UseTvSeriesListResult {
   const params = useMemo(
     () => ({ page, limit, sort, search, filter }),
-    [page, limit, sort, search, filter]
+    [page, limit, sort, search, filter],
   );
 
   // Gọi tất cả hook cùng thứ tự
   const allTvSeries = useTvSeriesList(type === "all" ? params : undefined);
   const trendingTvSeries = useTVSeriesTrending(
-    type === "trending" ? params : undefined
+    type === "trending" ? params : undefined,
   );
   const categoryTvSeries = useTvSeriesByCategory(
     categoryId ?? "",
-    type === "category" && categoryId ? params : undefined
+    type === "category" && categoryId ? params : undefined,
   );
 
   // Chọn kết quả theo type
@@ -238,7 +242,9 @@ export function useTvSeriesFindOne(tvSeriesId?: string) {
       if (!tvSeriesId) return;
 
       try {
-        const response = await tvSeriesControllerFindOne({ id: tvSeriesId });
+        const response = await tvSeriesControllerGetTvSeriesById({
+          id: tvSeriesId,
+        });
         if (response?.data?.data) {
           setResult(response.data.data);
         }

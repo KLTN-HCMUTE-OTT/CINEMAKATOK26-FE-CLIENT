@@ -3,6 +3,7 @@
 import { Button } from "@/components/ui/button";
 import { Bookmark, BookmarkCheck, Loader2 } from "lucide-react";
 import { useWatchlist } from "@/hooks/use-watchlist";
+import { useUIStore } from "@/store";
 
 interface WatchlistButtonProps {
   movieId: string;
@@ -23,12 +24,12 @@ export function WatchlistButton({
   className = "",
   onLoginRequired,
 }: WatchlistButtonProps) {
+  const openLoginModal = useUIStore((s) => s.openLoginModal);
   const handleLoginRequired = () => {
     if (onLoginRequired) {
       onLoginRequired();
     } else {
-      // Dispatch event to open login modal
-      window.dispatchEvent(new Event("open-login-modal"));
+      openLoginModal();
     }
   };
 

@@ -10,6 +10,7 @@ import { useEpisodeReviewReplies } from "@/hooks/use-episode-review-replies";
 import { reviewReplyControllerCreateReply } from "@/apis/api/reviewReplies";
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
+import { useUIStore } from "@/store";
 
 // Component to handle replies for a single episode review
 function EpisodeReviewWithReplies({
@@ -21,11 +22,12 @@ function EpisodeReviewWithReplies({
   currentUserId?: string;
   formatDate: (dateString: string) => string;
 }) {
+  const openLoginModal = useUIStore((s) => s.openLoginModal);
   const [showReplies, setShowReplies] = useState(false);
   const [isReplying, setIsReplying] = useState(false);
   const [replyContent, setReplyContent] = useState("");
   const [expandedReplies, setExpandedReplies] = useState<Set<string>>(
-    new Set()
+    new Set(),
   );
 
   const {
@@ -56,7 +58,7 @@ function EpisodeReviewWithReplies({
   const handleReplyClick = () => {
     if (!currentUserId) {
       toast.error("Please login to reply");
-      window.dispatchEvent(new Event("open-login-modal"));
+      openLoginModal();
       return;
     }
     setIsReplying(!isReplying);
@@ -214,7 +216,7 @@ function EpisodeReviewWithReplies({
                   onReplyCreated={(parentReplyId) => {
                     console.log(
                       "[EpisodeReviewList] Reply created, parent:",
-                      parentReplyId
+                      parentReplyId,
                     );
                   }}
                   replyType="episodeReview"

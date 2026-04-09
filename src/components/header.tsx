@@ -24,20 +24,14 @@ import {
 } from "@/components/ui/dropdown-menu";
 import NavMenu from "./nav-menu";
 import { useAuth } from "@/hooks/use-auth";
+import { useUIStore } from "@/store";
 
 interface HeaderProps {
   variant?: "fixed" | "absolute" | "relative";
 }
 
 export function Header({ variant = "fixed" }: HeaderProps) {
-  const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
-  const [isRegisterModalOpen, setIsRegisterModalOpen] = useState(false);
-  const [modalContainer, setModalContainer] = useState<HTMLElement | null>(
-    null
-  );
-  const [activeDropdown, setActiveDropdown] = useState<string | null>(null);
   const [isVisible, setIsVisible] = useState(true);
   const [lastScrollY, setLastScrollY] = useState(0);
   const [isAtTop, setIsAtTop] = useState(true);
@@ -46,30 +40,22 @@ export function Header({ variant = "fixed" }: HeaderProps) {
   const [isMounted, setIsMounted] = useState(false);
   const router = useRouter();
 
+  const isLoginModalOpen = useUIStore((s) => s.loginModalOpen);
+  const isRegisterModalOpen = useUIStore((s) => s.registerModalOpen);
+  const modalContainer = useUIStore((s) => s.modalContainer);
+  const openLoginModal = useUIStore((s) => s.openLoginModal);
+  const closeLoginModal = useUIStore((s) => s.closeLoginModal);
+  const closeRegisterModal = useUIStore((s) => s.closeRegisterModal);
+  const switchToRegister = useUIStore((s) => s.switchToRegister);
+  const switchToLogin = useUIStore((s) => s.switchToLogin);
+  const clearModalContainer = useUIStore((s) => s.clearModalContainer);
+
   // Use auth hook
   const { user, logout } = useAuth();
 
   // Set mounted flag after hydration
   useEffect(() => {
     setIsMounted(true);
-  }, []);
-
-  // Listen for open login modal event
-  useEffect(() => {
-    const handleOpenLoginModal = (e?: any) => {
-      // Check if container is provided in event detail
-      if (e?.detail?.container) {
-        setModalContainer(e.detail.container);
-      } else {
-        setModalContainer(null);
-      }
-      setIsLoginModalOpen(true);
-    };
-    window.addEventListener("open-login-modal", handleOpenLoginModal);
-
-    return () => {
-      window.removeEventListener("open-login-modal", handleOpenLoginModal);
-    };
   }, []);
 
   const handleLogout = () => {
@@ -153,14 +139,14 @@ export function Header({ variant = "fixed" }: HeaderProps) {
           variant === "fixed" && isVisible
             ? "translate-y-0"
             : variant === "fixed" && !isVisible
-            ? "-translate-y-full"
-            : ""
+              ? "-translate-y-full"
+              : ""
         } ${
           variant === "relative"
             ? "bg-gray-900"
             : isAtTop && (variant === "fixed" || variant === "absolute")
-            ? "bg-transparent"
-            : "bg-gray-900"
+              ? "bg-transparent"
+              : "bg-gray-900"
         }`}
         style={
           variant === "fixed" || variant === "absolute" ? { top: 0 } : undefined
@@ -316,7 +302,7 @@ export function Header({ variant = "fixed" }: HeaderProps) {
                 </DropdownMenu>
               ) : (
                 <button
-                  onClick={() => setIsLoginModalOpen(true)}
+                  onClick={() => openLoginModal()}
                   className="flex items-center justify-center w-8 h-8 rounded-full text-white hover:text-purple-400 transition-colors focus:outline-none"
                 >
                   <User className="w-4 h-4" />
@@ -432,12 +418,11 @@ export function Header({ variant = "fixed" }: HeaderProps) {
       <LoginModal
         isOpen={isLoginModalOpen}
         onClose={() => {
-          setIsLoginModalOpen(false);
-          setModalContainer(null);
+          closeLoginModal();
+          clearModalContainer();
         }}
         onSwitchToRegister={() => {
-          setIsLoginModalOpen(false);
-          setIsRegisterModalOpen(true);
+          switchToRegister();
         }}
         container={modalContainer}
       />
@@ -445,12 +430,11 @@ export function Header({ variant = "fixed" }: HeaderProps) {
       <RegisterModal
         isOpen={isRegisterModalOpen}
         onClose={() => {
-          setIsRegisterModalOpen(false);
-          setModalContainer(null);
+          closeRegisterModal();
+          clearModalContainer();
         }}
         onSwitchToLogin={() => {
-          setIsRegisterModalOpen(false);
-          setIsLoginModalOpen(true);
+          switchToLogin();
         }}
         container={modalContainer}
       />

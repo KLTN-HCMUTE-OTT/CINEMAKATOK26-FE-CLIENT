@@ -16,6 +16,7 @@ import { useReviewReplies } from "@/hooks/use-review-replies";
 import { reviewReplyControllerCreateReply } from "@/apis/api/reviewReplies";
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
+import { useUIStore } from "@/store";
 
 // Component to handle replies for a single review
 function ReviewWithReplies({
@@ -29,11 +30,12 @@ function ReviewWithReplies({
   formatDate: (dateString: string) => string;
   showRating: boolean;
 }) {
+  const openLoginModal = useUIStore((s) => s.openLoginModal);
   const [showReplies, setShowReplies] = useState(false);
   const [isReplying, setIsReplying] = useState(false);
   const [replyContent, setReplyContent] = useState("");
   const [expandedReplies, setExpandedReplies] = useState<Set<string>>(
-    new Set()
+    new Set(),
   );
 
   const {
@@ -64,7 +66,7 @@ function ReviewWithReplies({
   const handleReplyClick = () => {
     if (!currentUserId) {
       toast.error("Please login to reply");
-      window.dispatchEvent(new Event("open-login-modal"));
+      openLoginModal();
       return;
     }
     setIsReplying(!isReplying);
@@ -227,7 +229,7 @@ function ReviewWithReplies({
                   onReplyCreated={(parentReplyId) => {
                     console.log(
                       "[ReviewList] Reply created, parent:",
-                      parentReplyId
+                      parentReplyId,
                     );
                     // Don't refresh all, let child components handle their own count updates
                   }}

@@ -1,17 +1,17 @@
 import { useState, useEffect, useMemo } from "react";
 import {
-  newsControllerFindAll,
-  newsControllerFindOne,
-  newsControllerCreate,
-  newsControllerUpdate,
-  newsControllerDelete,
-  newsControllerFindNewsRelated,
+  newsControllerGetNews,
+  newsControllerGetNewsById,
+  newsControllerCreateNews,
+  newsControllerUpdateNews,
+  newsControllerDeleteNews,
+  newsControllerGetRelatedNews,
 } from "@/apis/api/news";
 
 // Get all news
-export function useNews(params: API.NewsControllerFindAllParams) {
+export function useNews(params: API.NewsControllerGetNewsParams) {
   const [data, setData] = useState<API.NewsDtoPaginatedResponseDto | null>(
-    null
+    null,
   );
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
@@ -19,7 +19,7 @@ export function useNews(params: API.NewsControllerFindAllParams) {
   // Serialize params để tránh re-render không cần thiết
   const serializedParams = useMemo(
     () => JSON.stringify(params),
-    [params.page, params.limit, params.search]
+    [params.page, params.limit, params.search, params.sort],
   );
 
   useEffect(() => {
@@ -28,7 +28,7 @@ export function useNews(params: API.NewsControllerFindAllParams) {
         setIsLoading(true);
         setError(null);
         const parsedParams = JSON.parse(serializedParams);
-        const response = await newsControllerFindAll(parsedParams);
+        const response = await newsControllerGetNews(parsedParams);
         setData(response.data);
       } catch (err) {
         setError(err as Error);
@@ -54,7 +54,7 @@ export function useFeaturedNews() {
       try {
         setIsLoading(true);
         setError(null);
-        const response = await newsControllerFindAll({ page: 1, limit: 1 });
+        const response = await newsControllerGetNews({ page: 1, limit: 1 });
         setData(response.data.data[0]);
       } catch (err) {
         setError(err as Error);
@@ -82,7 +82,7 @@ export function useNewsById(id: string) {
       try {
         setIsLoading(true);
         setError(null);
-        const response = await newsControllerFindOne({ id });
+        const response = await newsControllerGetNewsById({ id });
         setData(response.data.data);
       } catch (err) {
         setError(err as Error);
@@ -100,10 +100,10 @@ export function useNewsById(id: string) {
 // Get related news
 export function useRelatedNews(
   id: string,
-  params?: { page?: number; limit?: number }
+  params?: { page?: number; limit?: number },
 ) {
   const [data, setData] = useState<API.NewsDtoPaginatedResponseDto | null>(
-    null
+    null,
   );
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
@@ -115,8 +115,8 @@ export function useRelatedNews(
       try {
         setIsLoading(true);
         setError(null);
-        const response = await newsControllerFindNewsRelated({
-          id,
+        const response = await newsControllerGetRelatedNews({
+          newsId: id,
           page: params?.page || 1,
           limit: params?.limit || 6,
         });
@@ -139,11 +139,11 @@ export function useCreateNews() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<Error | null>(null);
 
-  const createNews = async (newsData: API.CreateNewsDto) => {
+  const createNews = async (newsData: API.CreateNewsBySessionDto) => {
     try {
       setIsLoading(true);
       setError(null);
-      const response = await newsControllerCreate(newsData);
+      const response = await newsControllerCreateNews(newsData);
       return response;
     } catch (err) {
       setError(err as Error);
@@ -165,7 +165,7 @@ export function useUpdateNews() {
     try {
       setIsLoading(true);
       setError(null);
-      const response = await newsControllerUpdate({ id }, newsData);
+      const response = await newsControllerUpdateNews({ id }, newsData);
       return response;
     } catch (err) {
       setError(err as Error);
@@ -187,7 +187,7 @@ export function useDeleteNews() {
     try {
       setIsLoading(true);
       setError(null);
-      const response = await newsControllerDelete({ id });
+      const response = await newsControllerDeleteNews({ id });
       return response;
     } catch (err) {
       setError(err as Error);

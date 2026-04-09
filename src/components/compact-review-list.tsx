@@ -16,6 +16,7 @@ import { useReviewReplies } from "@/hooks/use-review-replies";
 import { reviewReplyControllerCreateReply } from "@/apis/api/reviewReplies";
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
+import { useUIStore } from "@/store";
 
 // Compact component for review replies in dialog
 function CompactReviewWithReplies({
@@ -31,11 +32,12 @@ function CompactReviewWithReplies({
   showRating: boolean;
   container?: HTMLElement | null;
 }) {
+  const openLoginModal = useUIStore((s) => s.openLoginModal);
   const [showReplies, setShowReplies] = useState(false);
   const [isReplying, setIsReplying] = useState(false);
   const [replyContent, setReplyContent] = useState("");
   const [expandedReplies, setExpandedReplies] = useState<Set<string>>(
-    new Set()
+    new Set(),
   );
 
   const {
@@ -64,7 +66,7 @@ function CompactReviewWithReplies({
   const handleReplyClick = () => {
     if (!currentUserId) {
       toast.error("Please login to reply");
-      window.dispatchEvent(new Event("open-login-modal"));
+      openLoginModal(container);
       return;
     }
     setIsReplying(!isReplying);
@@ -224,7 +226,7 @@ function CompactReviewWithReplies({
                   onReplyCreated={(parentReplyId: string) => {
                     console.log(
                       "[CompactReview] Reply created:",
-                      parentReplyId
+                      parentReplyId,
                     );
                   }}
                   replyType="review"

@@ -15,7 +15,7 @@ import {
   reviewControllerCreateReview,
   reviewControllerUpdateReview,
   reviewControllerCheckReviewOwner,
-} from "@/apis/api/reviews";
+} from "@/apis/api/review";
 import { toast } from "sonner";
 
 interface UseVideoPlayerActionsProps {

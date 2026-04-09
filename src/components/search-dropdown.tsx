@@ -4,8 +4,8 @@ import React, { useState, useRef, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { Search, Clock, Play, X } from "lucide-react";
 import Image from "next/image";
-import { movieControllerFindAll } from "@/apis/api/movie";
-import { tvSeriesControllerFindAll } from "@/apis/api/tvSeries";
+import { moviesControllerGetMovies } from "@/apis/api/movies";
+import { tvSeriesControllerGetTvSeries } from "@/apis/api/tvSeries";
 
 interface SearchResult {
   id: string;
@@ -79,23 +79,23 @@ export function SearchDropdown({
         const searchQueryObj = JSON.stringify({ title: searchQuery });
 
         // Search movies
-        const movieResponse = await movieControllerFindAll(
+        const movieResponse = await moviesControllerGetMovies(
           {
             search: searchQueryObj,
             limit: 5,
             page: pageNum,
           },
-          { withCredentials: true }
+          { withCredentials: true },
         );
 
         // Search TV series
-        const tvResponse = await tvSeriesControllerFindAll(
+        const tvResponse = await tvSeriesControllerGetTvSeries(
           {
             search: searchQueryObj,
             limit: 5,
             page: pageNum,
           },
-          { withCredentials: true }
+          { withCredentials: true },
         );
 
         const movieResults: SearchResult[] = (
@@ -119,7 +119,7 @@ export function SearchDropdown({
             description: tv.metaData.description,
             totalSeasons: tv.totalSeasons,
             type: "tv" as const,
-          })
+          }),
         );
 
         const combined = [...movieResults, ...tvResults];
@@ -148,7 +148,7 @@ export function SearchDropdown({
         }
       }
     },
-    []
+    [],
   );
 
   // Auto focus input when opened
@@ -224,7 +224,7 @@ export function SearchDropdown({
           performSearch(query, page + 1);
         }
       },
-      { threshold: 0.3 }
+      { threshold: 0.3 },
     );
 
     observer.observe(lastElementRef.current);

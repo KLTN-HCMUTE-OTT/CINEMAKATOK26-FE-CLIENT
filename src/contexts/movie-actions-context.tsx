@@ -17,8 +17,10 @@ import {
   reviewControllerCreateReview,
   reviewControllerUpdateReview,
   reviewControllerDeleteReview,
-} from "@/apis/api/reviews";
+} from "@/apis/api/review";
 import { toast } from "sonner";
+import { useUIStore } from "@/store";
+import { isAuthenticated } from "@/lib/auth";
 
 interface ActionsContextType {
   // Favorite
@@ -59,6 +61,7 @@ interface ActionsProviderProps {
 }
 
 export function ActionsProvider({ children, contentId }: ActionsProviderProps) {
+  const openLoginModal = useUIStore((s) => s.openLoginModal);
   // Favorite states
   const [isFavorite, setIsFavorite] = useState(false);
   const [totalFavorites, setTotalFavorites] = useState(0);
@@ -79,9 +82,7 @@ export function ActionsProvider({ children, contentId }: ActionsProviderProps) {
 
   // Check if user is logged in
   const isLoggedIn = () => {
-    if (typeof window === "undefined") return false;
-    const accessToken = localStorage.getItem("accessToken");
-    return !!accessToken;
+    return isAuthenticated();
   };
 
   // Fetch favorite status
@@ -186,10 +187,10 @@ export function ActionsProvider({ children, contentId }: ActionsProviderProps) {
         // Find user's review if logged in
         if (isLoggedIn()) {
           const userName = JSON.parse(
-            localStorage.getItem("user") || "{}"
+            localStorage.getItem("user") || "{}",
           )?.name;
           const myReview = reviews.find(
-            (r: API.ReviewDto) => r.name === userName
+            (r: API.ReviewDto) => r.name === userName,
           );
           if (myReview) {
             setUserReview(myReview);
@@ -242,7 +243,7 @@ export function ActionsProvider({ children, contentId }: ActionsProviderProps) {
   // Submit or update review
   const submitReview = async (rating: number, review: string) => {
     if (!isLoggedIn()) {
-      window.dispatchEvent(new Event("open-login-modal"));
+      openLoginModal();
       toast.error("Vui lòng đăng nhập để đánh giá!");
       return;
     }
@@ -255,15 +256,12 @@ export function ActionsProvider({ children, contentId }: ActionsProviderProps) {
     try {
       if (userReview) {
         // Update existing review
-        await reviewControllerUpdateReview(
-          { id: userReview.id },
-          {
-            id: userReview.id,
-            contentId,
-            rating,
-            contentReviewed: review,
-          }
-        );
+        await reviewControllerUpdateReview({ id: userReview.id }, {
+          id: userReview.id,
+          contentId,
+          rating,
+          contentReviewed: review,
+        } as any);
         toast.success("Đã cập nhật đánh giá");
       } else {
         // Create new review
@@ -271,7 +269,7 @@ export function ActionsProvider({ children, contentId }: ActionsProviderProps) {
           contentId,
           rating,
           contentReviewed: review,
-        });
+        } as any);
         toast.success("Đã gửi đánh giá thành công");
       }
 
@@ -281,7 +279,7 @@ export function ActionsProvider({ children, contentId }: ActionsProviderProps) {
       console.error("Error submitting review:", err);
 
       if (err?.response?.status === 401 || err?.response?.status === 403) {
-        window.dispatchEvent(new Event("open-login-modal"));
+        openLoginModal();
         toast.error("Vui lòng đăng nhập để đánh giá!");
       } else if (err?.response?.data?.message?.includes("already reviewed")) {
         toast.error("Bạn đã đánh giá nội dung này rồi!");
@@ -295,7 +293,7 @@ export function ActionsProvider({ children, contentId }: ActionsProviderProps) {
   // Delete review
   const deleteReview = async (reviewId: string) => {
     if (!isLoggedIn()) {
-      window.dispatchEvent(new Event("open-login-modal"));
+      openLoginModal();
       return;
     }
 
@@ -309,7 +307,7 @@ export function ActionsProvider({ children, contentId }: ActionsProviderProps) {
       console.error("Error deleting review:", err);
 
       if (err?.response?.status === 401 || err?.response?.status === 403) {
-        window.dispatchEvent(new Event("open-login-modal"));
+        openLoginModal();
       } else {
         toast.error("Có lỗi xảy ra. Vui lòng thử lại!");
       }
@@ -320,7 +318,7 @@ export function ActionsProvider({ children, contentId }: ActionsProviderProps) {
   const toggleFavorite = async () => {
     // Check login first
     if (!isLoggedIn()) {
-      window.dispatchEvent(new Event("open-login-modal"));
+      openLoginModal();
       return;
     }
 
@@ -346,7 +344,7 @@ export function ActionsProvider({ children, contentId }: ActionsProviderProps) {
       console.error("Error toggling favorite:", err);
       // Better error message based on error type
       if (err?.response?.status === 401 || err?.response?.status === 403) {
-        window.dispatchEvent(new Event("open-login-modal"));
+        openLoginModal();
       } else {
         toast.error("Có lỗi xảy ra. Vui lòng thử lại!");
       }
@@ -359,7 +357,7 @@ export function ActionsProvider({ children, contentId }: ActionsProviderProps) {
   const toggleWatchlist = async () => {
     // Check login first
     if (!isLoggedIn()) {
-      window.dispatchEvent(new Event("open-login-modal"));
+      openLoginModal();
       return;
     }
 
@@ -383,7 +381,7 @@ export function ActionsProvider({ children, contentId }: ActionsProviderProps) {
       console.error("Error toggling watchlist:", err);
       // Better error message based on error type
       if (err?.response?.status === 401 || err?.response?.status === 403) {
-        window.dispatchEvent(new Event("open-login-modal"));
+        openLoginModal();
       } else {
         toast.error("Có lỗi xảy ra. Vui lòng thử lại!");
       }

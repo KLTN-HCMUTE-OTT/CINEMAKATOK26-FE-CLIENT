@@ -9,6 +9,8 @@ import { VideoControls } from "./VideoControls";
 import { RatingDialog } from "./RatingDialog";
 import { TVSeriesVideoControls } from "./TVSeriesVideoControls";
 import { useActions } from "@/contexts/movie-actions-context";
+import { useUIStore } from "@/store";
+import { isAuthenticated } from "@/lib/auth";
 
 interface VideoPlayerProps {
   src: string;
@@ -47,6 +49,7 @@ export function CustomVideoPlayer({
   onPrevEpisode,
   onNextEpisode,
 }: VideoPlayerProps) {
+  const openLoginModal = useUIStore((s) => s.openLoginModal);
   const [isRatingDialogOpen, setIsRatingDialogOpen] = useState(false);
 
   // Video player state and controls
@@ -122,26 +125,16 @@ export function CustomVideoPlayer({
 
   // Wrap toggle functions to pass container for modal rendering
   const toggleFavorite = () => {
-    // Dispatch event with container if needed for login
     if (!isLoggedIn() && containerRef.current) {
-      window.dispatchEvent(
-        new CustomEvent("open-login-modal", {
-          detail: { container: containerRef.current },
-        })
-      );
+      openLoginModal(containerRef.current);
       return;
     }
     contextToggleFavorite();
   };
 
   const toggleWatchlist = () => {
-    // Dispatch event with container if needed for login
     if (!isLoggedIn() && containerRef.current) {
-      window.dispatchEvent(
-        new CustomEvent("open-login-modal", {
-          detail: { container: containerRef.current },
-        })
-      );
+      openLoginModal(containerRef.current);
       return;
     }
     contextToggleWatchlist();
@@ -149,9 +142,7 @@ export function CustomVideoPlayer({
 
   // Check if user is logged in
   const isLoggedIn = () => {
-    if (typeof window === "undefined") return false;
-    const accessToken = localStorage.getItem("accessToken");
-    return !!accessToken;
+    return isAuthenticated();
   };
 
   return (

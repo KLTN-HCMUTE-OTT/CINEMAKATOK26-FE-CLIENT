@@ -2,12 +2,12 @@
 
 import { useState, useEffect, useCallback, useMemo } from "react";
 import {
-  movieControllerFindAll,
-  movieControllerGetTrendingMovies,
-  movieControllerGetNewReleaseMovies,
-  movieControllerGetMoviesByCategory,
-  movieControllerGetRecommendationsByMovieId,
-} from "@/apis/api/movie";
+  moviesControllerGetMovies,
+  moviesControllerGetTrendingMovies,
+  moviesControllerGetNewReleaseMovies,
+  moviesControllerGetMoviesByCategory,
+  moviesControllerGetRecommendationsByMovieId,
+} from "@/apis/api/movies";
 import { toast } from "sonner";
 
 interface UseMoviesResult {
@@ -19,7 +19,7 @@ interface UseMoviesResult {
 
 type MovieFetchFunction = (
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  params: any
+  params: any,
 ) => Promise<{ data: API.MovieDtoPaginatedResponseDto }>;
 
 /**
@@ -30,10 +30,10 @@ function useMoviesFetch(
   fetchFn: MovieFetchFunction,
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   params: any,
-  errorMessage: string
+  errorMessage: string,
 ): UseMoviesResult {
   const [result, setResult] = useState<API.MovieDtoPaginatedResponseDto | null>(
-    null
+    null,
   );
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
@@ -85,12 +85,12 @@ function useMoviesFetch(
  * Hook to fetch all movies with pagination
  */
 export function useAllMovies(
-  params?: API.MovieControllerFindAllParams
+  params?: API.MoviesControllerGetMoviesParams,
 ): UseMoviesResult {
   return useMoviesFetch(
-    movieControllerFindAll,
+    moviesControllerGetMovies,
     params,
-    "Không thể tải danh sách phim"
+    "Không thể tải danh sách phim",
   );
 }
 
@@ -98,12 +98,12 @@ export function useAllMovies(
  * Hook to fetch trending movies
  */
 export function useTrendingMovies(
-  params?: API.MovieControllerGetTrendingMoviesParams
+  params?: API.MoviesControllerGetTrendingMoviesParams,
 ): UseMoviesResult {
   return useMoviesFetch(
-    movieControllerGetTrendingMovies,
+    moviesControllerGetTrendingMovies,
     params,
-    "Không thể tải phim đang thịnh hành"
+    "Không thể tải phim đang thịnh hành",
   );
 }
 
@@ -111,12 +111,12 @@ export function useTrendingMovies(
  * Hook to fetch new release movies
  */
 export function useNewReleaseMovies(
-  params?: API.MovieControllerGetNewReleaseMoviesParams
+  params?: API.MoviesControllerGetNewReleaseMoviesParams,
 ): UseMoviesResult {
   return useMoviesFetch(
-    movieControllerGetNewReleaseMovies,
+    moviesControllerGetNewReleaseMovies,
     params,
-    "Không thể tải phim mới phát hành"
+    "Không thể tải phim mới phát hành",
   );
 }
 
@@ -125,9 +125,9 @@ export function useNewReleaseMovies(
  */
 export function useMoviesByCategory(
   categoryId: string,
-  params?: Omit<API.MovieControllerGetMoviesByCategoryParams, "categoryId">
+  params?: Omit<API.MoviesControllerGetMoviesByCategoryParams, "categoryId">,
 ): UseMoviesResult {
-  const fullParams: API.MovieControllerGetMoviesByCategoryParams | undefined =
+  const fullParams: API.MoviesControllerGetMoviesByCategoryParams | undefined =
     categoryId
       ? {
           categoryId,
@@ -136,19 +136,19 @@ export function useMoviesByCategory(
       : undefined;
 
   return useMoviesFetch(
-    movieControllerGetMoviesByCategory,
+    moviesControllerGetMoviesByCategory,
     fullParams,
-    "Không thể tải phim theo thể loại"
+    "Không thể tải phim theo thể loại",
   );
 }
 
 export function useRecommendedMovies(
-  params?: API.MovieControllerGetRecommendationsByMovieIdParams
+  params?: API.MoviesControllerGetRecommendationsByMovieIdParams,
 ): UseMoviesResult {
   return useMoviesFetch(
-    movieControllerGetRecommendationsByMovieId,
+    moviesControllerGetRecommendationsByMovieId,
     params,
-    "Không thể tải phim gợi ý"
+    "Không thể tải phim gợi ý",
   );
 }
 
@@ -171,23 +171,23 @@ export function useMovieData({
   //  Memoize params để tránh recreate object
   const params = useMemo(
     () => ({ page, limit, sort, search }),
-    [page, limit, sort, search]
+    [page, limit, sort, search],
   );
 
   //  Chỉ gọi hook tương ứng với type
   const allMovies = useAllMovies(type === "all" ? params : undefined);
 
   const trendingMovies = useTrendingMovies(
-    type === "trending" ? params : undefined
+    type === "trending" ? params : undefined,
   );
 
   const newReleaseMovies = useNewReleaseMovies(
-    type === "new-release" ? params : undefined
+    type === "new-release" ? params : undefined,
   );
 
   const moviesByCategory = useMoviesByCategory(
     categoryId || "",
-    type === "category" ? params : undefined
+    type === "category" ? params : undefined,
   );
 
   //  Return data dựa vào type

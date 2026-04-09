@@ -2,22 +2,19 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
 // List of routes that require authentication
-//const protectedRoutes = ["/profile", "/video"];
-const protectedRoutes = ["/video"];
+const protectedRoutes = ["/video", "/profile"];
 
 /**
  * Middleware to check authentication for protected routes
  * This runs on the server before the page is rendered
  *
- * Note: This is optional - the ProtectedRoute component already handles
- * client-side protection. Use this for additional server-side security.
  */
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   // Check if the route is protected
   const isProtectedRoute = protectedRoutes.some((route) =>
-    pathname.startsWith(route)
+    pathname.startsWith(route),
   );
 
   // If it's a public route, allow access
@@ -25,17 +22,21 @@ export function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
-  // For protected routes, check for auth token in cookies or headers
-  // Note: Since we store tokens in localStorage (client-side only),
-  // this middleware can't access them directly.
-  // You may want to store token in httpOnly cookies for server-side validation
+  const accessToken = request.cookies.get("accessToken")?.value;
+  const refreshToken = request.cookies.get("refreshToken")?.value;
 
-  const token = request.cookies.get("accessToken")?.value;
+  if (!accessToken && refreshToken) {
+    const refreshUrl = request.nextUrl.clone();
+    refreshUrl.pathname = "/api/auth/refresh";
+    refreshUrl.searchParams.set("redirect", pathname);
+    return NextResponse.redirect(refreshUrl);
+  }
 
   // If no token and trying to access protected route, redirect to home
-  if (!token && isProtectedRoute) {
+  if (!accessToken && isProtectedRoute) {
     const url = request.nextUrl.clone();
     url.pathname = "/";
+    url.searchParams.set("redirect", pathname);
     return NextResponse.redirect(url);
   }
 

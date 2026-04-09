@@ -4,15 +4,11 @@ import { useState, useEffect } from "react";
 import { X, Eye, EyeOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
-import {
-  authControllerLogin,
-  authControllerSocialLogin,
-} from "@/apis/api/auth";
 import { useRouter } from "next/navigation";
 import { useGoogleLogin } from "@react-oauth/google";
 import { toast } from "sonner";
-import { saveAuthData } from "@/lib/auth";
 import { Portal } from "@/components/ui/portal";
+import { useAuthStore } from "@/store";
 
 interface LoginModalProps {
   isOpen: boolean;
@@ -35,6 +31,8 @@ function LoginModal({
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
   const router = useRouter();
+  const login = useAuthStore((s) => s.login);
+  const loginWithGoogle = useAuthStore((s) => s.loginWithGoogle);
 
   useEffect(() => {
     if (isOpen) {
@@ -61,31 +59,14 @@ function LoginModal({
     setIsLoading(true);
 
     try {
-      const response = await authControllerLogin({
+      await login({
         email,
         password,
       });
 
-      if (response?.data?.data) {
-        const userData = response.data.data;
-
-        // Store auth data using utility function
-        saveAuthData({
-          accessToken: userData.token.accessToken,
-          refreshToken: userData.token.refreshToken,
-          user: userData,
-        });
-
-        // Show success toast
-        toast.success("Login successful! Welcome back.");
-
-        // Dispatch custom event to notify header of login
-        window.dispatchEvent(new Event("user-logged-in"));
-
-        // Close modal and redirect
-        handleClose();
-        router.refresh();
-      }
+      toast.success("Login successful! Welcome back.");
+      handleClose();
+      router.refresh();
     } catch (err: any) {
       // Handle different error response structures
       let errorMessage = "Invalid email or password";
@@ -103,7 +84,7 @@ function LoginModal({
         ) {
           // Check if error is an object with field-specific messages
           const errorMessages = Object.values(errorData.error).filter(
-            (msg) => typeof msg === "string"
+            (msg) => typeof msg === "string",
           );
           if (errorMessages.length > 0) {
             errorMessage = errorMessages.join(". ");
@@ -128,32 +109,11 @@ function LoginModal({
         setIsLoading(true);
         setError("");
 
-        // Call authControllerSocialLogin with Google access token
-        const response = await authControllerSocialLogin({
-          provider: "google",
-          accessToken: tokenResponse.access_token,
-        });
+        await loginWithGoogle(tokenResponse.access_token);
 
-        if (response?.data?.data) {
-          const userData = response.data.data;
-
-          // Store tokens
-          localStorage.setItem("accessToken", userData.token.accessToken);
-          localStorage.setItem("refreshToken", userData.token.refreshToken);
-
-          // Store user info
-          localStorage.setItem("user", JSON.stringify(userData));
-
-          // Show success toast
-          toast.success("Login successful! Welcome back.");
-
-          // Dispatch custom event to notify header of login
-          window.dispatchEvent(new Event("user-logged-in"));
-
-          // Close modal and redirect
-          handleClose();
-          router.refresh();
-        }
+        toast.success("Login successful! Welcome back.");
+        handleClose();
+        router.refresh();
       } catch (err: any) {
         // Handle different error response structures
         let errorMessage = "Google login failed. Please try again.";
@@ -171,7 +131,7 @@ function LoginModal({
           ) {
             // Check if error is an object with field-specific messages
             const errorMessages = Object.values(errorData.error).filter(
-              (msg) => typeof msg === "string"
+              (msg) => typeof msg === "string",
             );
             if (errorMessages.length > 0) {
               errorMessage = errorMessages.join(". ");

@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
-import { actorControllerFindOne } from "@/apis/api/actors";
-import { directorControllerFindOne } from "@/apis/api/directors";
+import { actorsControllerGetActorById } from "@/apis/api/actors";
+import { directorsControllerGetDirectorById } from "@/apis/api/directors";
 
 export enum GENDER {
   MALE = "MALE",
@@ -57,7 +57,7 @@ export function usePerson({ id }: UsePersonOptions) {
 
         // Try to fetch from actors first
         try {
-          const actorResponse = await actorControllerFindOne({
+          const actorResponse = await actorsControllerGetActorById({
             id,
           });
 
@@ -75,7 +75,7 @@ export function usePerson({ id }: UsePersonOptions) {
         }
 
         // If not found in actors, try directors
-        const directorResponse = await directorControllerFindOne({
+        const directorResponse = await directorsControllerGetDirectorById({
           id,
         });
 
