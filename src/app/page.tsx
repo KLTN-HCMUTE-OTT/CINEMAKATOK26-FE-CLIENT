@@ -13,23 +13,24 @@ import { Footer } from "@/components/footer";
 import { Header } from "@/components/header";
 import { useAuth } from "@/hooks/use-auth";
 import { TrendingMoviesList } from "@/components/trending-movies";
+import { useUIStore } from "@/store";
 
 function HomeContent() {
   const searchParams = useSearchParams();
   const { isAuthenticated } = useAuth();
+  const openLoginModal = useUIStore((s) => s.openLoginModal);
 
   useEffect(() => {
     // Check if we need to open login modal
     if (searchParams.get("openLogin") === "true") {
-      // Trigger login modal open event
-      window.dispatchEvent(new Event("open-login-modal"));
+      openLoginModal();
 
       // Clean up URL
       const url = new URL(window.location.href);
       url.searchParams.delete("openLogin");
       window.history.replaceState({}, "", url.toString());
     }
-  }, [searchParams]);
+  }, [openLoginModal, searchParams]);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-900 via-slate-900 to-black">
@@ -39,7 +40,7 @@ function HomeContent() {
 
       {/* Wrapper with extra spacing for carousel sections */}
       <div className="space-y-16 py-8">
-        {isAuthenticated && <RecommendedTvShows />}
+        {/* {isAuthenticated && <RecommendedTvShows />} */}
         <TrendingMoviesList page={1} limit={10} />
         <NewReleases />
       </div>

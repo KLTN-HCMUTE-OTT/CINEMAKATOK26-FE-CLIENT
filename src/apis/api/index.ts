@@ -2,47 +2,51 @@
 /* eslint-disable */
 // API modified time：
 // API resourceId：
-import * as content from "./content";
-import * as video from "./video";
-import * as directors from "./directors";
-import * as actors from "./actors";
-import * as tags from "./tags";
-import * as categories from "./categories";
-import * as movie from "./movie";
-import * as tvSeries from "./tvSeries";
-import * as analytics from "./analytics";
-import * as news from "./news";
-import * as recommendations from "./recommendations";
-import * as user from "./user";
 import * as auth from "./auth";
-import * as reviews from "./reviews";
-import * as reviewReplies from "./reviewReplies";
-import * as watchList from "./watchList";
-import * as favorites from "./favorites";
+import * as users from "./users";
+import * as contents from "./contents";
+import * as movies from "./movies";
+import * as news from "./news";
+import * as tvSeries from "./tvSeries";
+import * as episodes from "./episodes";
+import * as actors from "./actors";
+import * as directors from "./directors";
+import * as categories from "./categories";
+import * as tags from "./tags";
+import * as videos from "./videos";
 import * as watchProgress from "./watchProgress";
+import * as favorites from "./favorites";
+import * as watchList from "./watchList";
+import * as review from "./review";
 import * as episodeReviews from "./episodeReviews";
+import * as reviewReplies from "./reviewReplies";
 import * as reports from "./reports";
+import * as payments from "./payments";
+import * as streaming from "./streaming";
 import * as auditLogs from "./auditLogs";
+import * as analytics from "./analytics";
 export default {
-  content,
-  video,
-  directors,
-  actors,
-  tags,
-  categories,
-  movie,
-  tvSeries,
-  analytics,
-  news,
-  recommendations,
-  user,
   auth,
-  reviews,
-  reviewReplies,
-  watchList,
-  favorites,
+  users,
+  contents,
+  movies,
+  news,
+  tvSeries,
+  episodes,
+  actors,
+  directors,
+  categories,
+  tags,
+  videos,
   watchProgress,
+  favorites,
+  watchList,
+  review,
   episodeReviews,
+  reviewReplies,
   reports,
+  payments,
+  streaming,
   auditLogs,
+  analytics,
 };

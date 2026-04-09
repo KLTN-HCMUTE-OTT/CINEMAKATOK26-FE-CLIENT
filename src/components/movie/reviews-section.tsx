@@ -6,9 +6,11 @@ import { ReviewList } from "@/components/review-list";
 import { useAuth } from "@/hooks/use-auth";
 import { toast } from "sonner";
 import { useActions } from "@/contexts/movie-actions-context";
+import { useUIStore } from "@/store";
 
 export function ReviewsSection() {
   const auth = useAuth();
+  const openLoginModal = useUIStore((s) => s.openLoginModal);
 
   // Shared context
   const {
@@ -46,7 +48,7 @@ export function ReviewsSection() {
   const handleSubmitReview = async () => {
     if (!auth.user) {
       toast.error("Please login to submit a review");
-      window.dispatchEvent(new Event("open-login-modal"));
+      openLoginModal();
       return;
     }
     if (rating === 0) {

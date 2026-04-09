@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { videoControllerGetFileAccess } from "@/apis/api/video";
+import { streamingControllerGetFileAccess } from "@/apis/api/streaming";
 
 const HLS_MIME_TYPE = "application/x-mpegURL";
 
@@ -24,7 +24,7 @@ interface AbsContentResult {
 
 const useVideoAccess = (s3KeyStream: string) => {
   const [videoContent, setVideoContent] = useState<VideoInfo | undefined>(
-    undefined
+    undefined,
   );
 
   const handleGetFileInfo = async () => {
@@ -34,9 +34,9 @@ const useVideoAccess = (s3KeyStream: string) => {
     const mimeType = HLS_MIME_TYPE;
 
     try {
-      const result = await videoControllerGetFileAccess(
+      const result = await streamingControllerGetFileAccess(
         { s3Key: s3FileKey },
-        { withCredentials: true }
+        { withCredentials: true },
       );
 
       const data = result.data.data as AbsContentResult;

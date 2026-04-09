@@ -9,6 +9,8 @@ import {
   episodeReviewControllerDeleteReview,
 } from "@/apis/api/episodeReviews";
 import { toast } from "sonner";
+import { useUIStore } from "@/store";
+import { isAuthenticated } from "@/lib/auth";
 
 interface EpisodeReviewContextType {
   // Reviews
@@ -41,9 +43,10 @@ export function EpisodeReviewProvider({
   children,
   episodeId,
 }: EpisodeReviewProviderProps) {
+  const openLoginModal = useUIStore((s) => s.openLoginModal);
   // Review states
   const [userReview, setUserReview] = useState<API.EpisodeReviewDto | null>(
-    null
+    null,
   );
   const [allReviews, setAllReviews] = useState<API.EpisodeReviewDto[]>([]);
   const [reviewsLoading, setReviewsLoading] = useState(false);
@@ -55,15 +58,13 @@ export function EpisodeReviewProvider({
 
   // Check if user is logged in
   const isLoggedIn = () => {
-    if (typeof window === "undefined") return false;
-    const accessToken = localStorage.getItem("accessToken");
-    return !!accessToken;
+    return isAuthenticated();
   };
 
   // Fetch reviews for episode with pagination
   const fetchReviewsForPage = async (
     page: number,
-    order: "newest" | "oldest" = sortOrder
+    order: "newest" | "oldest" = sortOrder,
   ) => {
     if (!episodeId) return;
 
@@ -100,10 +101,10 @@ export function EpisodeReviewProvider({
         // Find user's review if logged in
         if (isLoggedIn()) {
           const userName = JSON.parse(
-            localStorage.getItem("user") || "{}"
+            localStorage.getItem("user") || "{}",
           )?.name;
           const myReview = reviews.find(
-            (r: API.EpisodeReviewDto) => r.name === userName
+            (r: API.EpisodeReviewDto) => r.name === userName,
           );
           if (myReview) {
             setUserReview(myReview);
@@ -171,7 +172,7 @@ export function EpisodeReviewProvider({
   // Submit or update review
   const submitReview = async (comment: string) => {
     if (!isLoggedIn()) {
-      window.dispatchEvent(new Event("open-login-modal"));
+      openLoginModal();
       toast.error("Please login to comment!");
       return;
     }
@@ -204,7 +205,7 @@ export function EpisodeReviewProvider({
       console.error("Error submitting episode review:", err);
 
       if (err?.response?.status === 401 || err?.response?.status === 403) {
-        window.dispatchEvent(new Event("open-login-modal"));
+        openLoginModal();
         toast.error("Please login to comment!");
       } else if (err?.response?.data?.message?.includes("already reviewed")) {
         toast.error("You have already reviewed this episode!");
@@ -218,7 +219,7 @@ export function EpisodeReviewProvider({
   // Delete review
   const deleteReview = async (reviewId: string) => {
     if (!isLoggedIn()) {
-      window.dispatchEvent(new Event("open-login-modal"));
+      openLoginModal();
       return;
     }
 
@@ -232,7 +233,7 @@ export function EpisodeReviewProvider({
       console.error("Error deleting episode review:", err);
 
       if (err?.response?.status === 401 || err?.response?.status === 403) {
-        window.dispatchEvent(new Event("open-login-modal"));
+        openLoginModal();
       } else {
         toast.error("An error occurred. Please try again!");
       }
@@ -267,7 +268,7 @@ export function useEpisodeReview() {
   const context = useContext(EpisodeReviewContext);
   if (context === undefined) {
     throw new Error(
-      "useEpisodeReview must be used within EpisodeReviewProvider"
+      "useEpisodeReview must be used within EpisodeReviewProvider",
     );
   }
   return context;

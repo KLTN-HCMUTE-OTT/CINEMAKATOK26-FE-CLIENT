@@ -1,35 +1,4 @@
 declare namespace API {
-  type ActorControllerFindAllParams = {
-    /** Search actors by name or nationality */
-    search?: any;
-    /** Sort order for actors */
-    sort?: string;
-    /** Number of items per page */
-    limit?: number;
-    /** Page number for pagination */
-    page?: number;
-  };
-
-  type ActorControllerFindOneParams = {
-    /** Actor ID */
-    id: string;
-  };
-
-  type ActorControllerGetTopActorsParams = {
-    limit?: number;
-    page?: number;
-  };
-
-  type ActorControllerRemoveParams = {
-    /** Actor ID */
-    id: string;
-  };
-
-  type ActorControllerUpdateParams = {
-    /** Actor ID */
-    id: string;
-  };
-
   type ActorDto = {
     /** Unique identifier of the entity */
     id: string;
@@ -51,65 +20,94 @@ declare namespace API {
     nationality: string;
   };
 
-  type AnalyticsControllerGetCategoriesStatsParams = {
-    /** Search categories by name */
+  type ActorsControllerDeleteActorParams = {
+    /** Actor ID */
+    id: string;
+  };
+
+  type ActorsControllerGetActorByIdParams = {
+    /** Actor ID */
+    id: string;
+  };
+
+  type ActorsControllerGetActorsParams = {
+    /** Search actors by name or nationality */
     search?: any;
-    /** Sort order for categories */
+    /** Sort order for actors */
     sort?: string;
     /** Number of items per page */
     limit?: number;
     /** Page number for pagination */
+    page?: number;
+  };
+
+  type ActorsControllerGetTopActorsParams = {
+    limit?: number;
+    page?: number;
+  };
+
+  type ActorsControllerSearchActorsParams = {
+    q: string;
+  };
+
+  type ActorsControllerUpdateActorParams = {
+    /** Actor ID */
+    id: string;
+  };
+
+  type AnalyticsControllerGetCategoriesStatsParams = {
+    search?: string;
+    sort?: string;
+    limit?: number;
+    page?: number;
+  };
+
+  type AnalyticsControllerGetChurnPredictionParams = {
+    search?: string;
+    sort?: string;
+    limit?: number;
     page?: number;
   };
 
   type AnalyticsControllerGetMoviesStatsParams = {
-    /** Search movies by title */
-    search?: any;
-    /** Sort order for movies */
+    search?: string;
     sort?: string;
-    /** Number of items per page */
     limit?: number;
-    /** Page number for pagination */
     page?: number;
   };
 
   type AnalyticsControllerGetTrendingMoviesParams = {
-    /** Search trending movies by title */
-    search?: any;
-    /** Sort order for trending movies */
+    search?: string;
     sort?: string;
-    /** Number of items per page */
     limit?: number;
-    /** Page number for pagination */
     page?: number;
   };
 
   type AnalyticsControllerGetTrendingTVSeriesParams = {
-    /** Search trending TV series by title */
-    search?: any;
-    /** Sort order for trending TV series */
+    search?: string;
     sort?: string;
-    /** Number of items per page */
     limit?: number;
-    /** Page number for pagination */
     page?: number;
   };
 
   type AnalyticsControllerGetTVSeriesStatsParams = {
-    /** Search TV series by title */
-    search?: any;
-    /** Sort order for TV series */
+    search?: string;
     sort?: string;
-    /** Number of items per page */
     limit?: number;
-    /** Page number for pagination */
+    page?: number;
+  };
+
+  type AnalyticsControllerGetViewForecastParams = {
+    search?: string;
+    sort?: string;
+    limit?: number;
     page?: number;
   };
 
   type AuditLogControllerGetLogsParams = {
-    /** Search actors by name or nationality */
+    /** Search audit logs by user ID or action */
     search?: any;
-    /** Sort order for actors */
+    /** Sort order for audit logs */
     sort?: string;
     /** Number of items per page */
     limit?: number;
@@ -133,10 +131,18 @@ declare namespace API {
     updatedAt: string;
     /** ID of the user who performed the action */
     userId: string;
+    /** Session ID to group actions into transactions for recommendation engine */
+    sessionId: string;
     /** Action performed */
     action: Record<string, any>;
-    /** Description of the action */
-    description: string;
+    /** Type of resource the action was performed on */
+    resourceType?: Record<string, any>;
+    /** ID of the resource the action was performed on */
+    resourceId?: string;
+    /** Signal weight for recommendation engine (2=strong, 1=medium, -1=negative, 0=ignored) */
+    signalWeight: number;
+    /** Action-specific extra data */
+    metadata?: Record<string, any>;
   };
 
   type AuditLogDtoPaginatedResponseDto = {
@@ -174,6 +180,11 @@ declare namespace API {
     password: string;
   };
 
+  type BanItemDto = {
+    type: "REVIEW" | "EPISODE_REVIEW" | "REVIEW_REPLY";
+    id: string;
+  };
+
   type BanUserDto = {
     /** Reason for banning user */
     banReason: string;
@@ -181,7 +192,12 @@ declare namespace API {
     durationDays: number;
   };
 
-  type CategoryControllerFindAllParams = {
+  type CategoriesControllerDeleteCategoryParams = {
+    /** Category ID */
+    id: string;
+  };
+
+  type CategoriesControllerGetCategoriesParams = {
     /** Search categories by name */
     search?: any;
     /** Sort order for categories */
@@ -192,17 +208,17 @@ declare namespace API {
     page?: number;
   };
 
-  type CategoryControllerFindOneParams = {
+  type CategoriesControllerGetCategoryByIdParams = {
     /** Category ID */
     id: string;
   };
 
-  type CategoryControllerRemoveParams = {
-    /** Category ID */
-    id: string;
+  type CategoriesControllerSearchCategoriesParams = {
+    /** Search categories by name */
+    q: string;
   };
 
-  type CategoryControllerUpdateParams = {
+  type CategoriesControllerUpdateCategoryParams = {
     /** Category ID */
     id: string;
   };
@@ -240,51 +256,40 @@ declare namespace API {
     confirmPassword: string;
   };
 
+  type ChurnFeatureDto = {
+    userId: string;
+    accountAgeDays: number;
+    daysSinceLastActivity: number;
+    watchProgressCount30d: number;
+    watchedDuration30d: number;
+    completedVideos30d: number;
+    watchlistAdds30d: number;
+    favoriteAdds30d: number;
+    reviews30d: number;
+    auditEvents30d: number;
+  };
+
+  type ChurnPredictionItemDto = {
+    userId: string;
+    name: string;
+    email: Record<string, any>;
+    churnProbability: number;
+    returnProbability: number;
+    riskLevel: "high" | "medium" | "low";
+    features: ChurnFeatureDto;
+  };
+
+  type ChurnPredictionItemDtoPaginatedResponseDto = {
+    statusCode: number;
+    message: string;
+    data: ChurnPredictionItemDto[];
+    meta: PaginationMeta;
+  };
+
   type ChurnRateMetricDto = {
     month: string;
     rate: number;
-    trend: string;
-  };
-
-  type ContentControllerDeleteParams = {
-    id: string;
-  };
-
-  type ContentControllerFindAllParams = {
-    /** Content type (MOVIE or TVSERIES) */
-    type?: "MOVIE" | "TVSERIES";
-    /** Array of tag IDs to filter by */
-    tagIds?: string[];
-    /** Array of category IDs to filter by */
-    categoryIds?: string[];
-    /** Array of actor IDs to filter by */
-    actorIds?: string[];
-    /** Array of director IDs to filter by */
-    directorIds?: string[];
-    /** Release year to filter by */
-    year?: number;
-    /** Search by title */
-    title?: string;
-    /** Sort by field */
-    sortBy?: "views" | "title" | "date";
-    /** Sort order */
-    order?: "ASC" | "DESC";
-    /** Page number for pagination */
-    page?: number;
-    /** Number of items per page */
-    limit?: number;
-  };
-
-  type ContentControllerFindOneParams = {
-    id: string;
-  };
-
-  type ContentControllerIncreaseViewParams = {
-    id: string;
-  };
-
-  type ContentControllerUpdateParams = {
-    id: string;
+    trend: "up" | "down";
   };
 
   type ContentDto = {
@@ -339,6 +344,43 @@ declare namespace API {
     statusCode: number;
     message: string;
     data: ContentDto;
+  };
+
+  type ContentsControllerDeleteContentParams = {
+    id: string;
+  };
+
+  type ContentsControllerGetContentByIdParams = {
+    id: string;
+  };
+
+  type ContentsControllerGetContentsParams = {
+    /** Content type (MOVIE or TVSERIES) */
+    type?: "MOVIE" | "TVSERIES";
+    /** Array of tag IDs to filter by */
+    tagIds?: string[];
+    /** Array of category IDs to filter by */
+    categoryIds?: string[];
+    /** Array of actor IDs to filter by */
+    actorIds?: string[];
+    /** Array of director IDs to filter by */
+    directorIds?: string[];
+    /** Release year to filter by */
+    year?: number;
+    /** Search by title */
+    title?: string;
+    /** Sort by field */
+    sortBy?: "views" | "title" | "date";
+    /** Sort order */
+    order?: "ASC" | "DESC";
+    /** Page number for pagination */
+    page?: number;
+    /** Number of items per page */
+    limit?: number;
+  };
+
+  type ContentsControllerUpdateContentParams = {
+    id: string;
   };
 
   type CreateActorDto = {
@@ -450,7 +492,7 @@ declare namespace API {
     video?: VideoDto;
   };
 
-  type CreateNewsDto = {
+  type CreateNewsBySessionDto = {
     /** Title of the news article */
     title: string;
     /** Summary of the news article */
@@ -554,38 +596,12 @@ declare namespace API {
   type DAUMetricDto = {
     day: string;
     users: number;
-    trend: string;
+    trend: "up" | "down";
   };
 
   type DeleteFavoriteDto = {
-    /** List of Content IDs to be removed from favorites */
+    /** List of content IDs to remove from favorites */
     contentIds: string[];
-  };
-
-  type DirectorControllerFindAllParams = {
-    /** Search directors by name or nationality */
-    search?: any;
-    /** Sort order for directors */
-    sort?: string;
-    /** Number of items per page */
-    limit?: number;
-    /** Page number for pagination */
-    page?: number;
-  };
-
-  type DirectorControllerFindOneParams = {
-    /** Director ID */
-    id: string;
-  };
-
-  type DirectorControllerRemoveParams = {
-    /** Director ID */
-    id: string;
-  };
-
-  type DirectorControllerUpdateParams = {
-    /** Director ID */
-    id: string;
   };
 
   type DirectorDto = {
@@ -607,6 +623,37 @@ declare namespace API {
     profilePicture: string;
     /** Nationality of the actor */
     nationality: string;
+  };
+
+  type DirectorsControllerDeleteDirectorParams = {
+    /** Director ID */
+    id: string;
+  };
+
+  type DirectorsControllerGetDirectorByIdParams = {
+    /** Director ID */
+    id: string;
+  };
+
+  type DirectorsControllerGetDirectorsParams = {
+    /** Search directors by name or nationality */
+    search?: any;
+    /** Sort order for directors */
+    sort?: string;
+    /** Number of items per page */
+    limit?: number;
+    /** Page number for pagination */
+    page?: number;
+  };
+
+  type DirectorsControllerSearchDirectorsParams = {
+    /** Search directors by name or nationality */
+    q: string;
+  };
+
+  type DirectorsControllerUpdateDirectorParams = {
+    /** Director ID */
+    id: string;
   };
 
   type EpisodeDto = {
@@ -708,17 +755,8 @@ declare namespace API {
     data: EpisodeReviewDto;
   };
 
-  type FavoriteContentDto = {
-    /** Total number of favorites for the content */
-    totalFavorites: number;
-    /** Indicates if the content is favorited by the user */
-    isFavorited: boolean;
-  };
-
-  type FavoriteContentDtoResponseDto = {
-    statusCode: number;
-    message: string;
-    data: FavoriteContentDto;
+  type EpisodesControllerGetEpisodeByIdParams = {
+    id: string;
   };
 
   type FavoriteControllerGetFavoriteStatusParams = {
@@ -727,6 +765,19 @@ declare namespace API {
 
   type FavoriteControllerRemoveFavoriteParams = {
     contentId: string;
+  };
+
+  type FavoriteStatusDto = {
+    /** Total number of favorites for the content */
+    totalFavorites: number;
+    /** Indicates if the content is favorited by the user */
+    isFavorited: boolean;
+  };
+
+  type FavoriteStatusDtoResponseDto = {
+    statusCode: number;
+    message: string;
+    data: FavoriteStatusDto;
   };
 
   type ForgotPasswordRequest = {
@@ -756,77 +807,8 @@ declare namespace API {
   type MAUMetricDto = {
     month: string;
     users: number;
-    trend: string;
+    trend: "up" | "down";
     change: string;
-  };
-
-  type MovieControllerDeleteParams = {
-    id: string;
-  };
-
-  type MovieControllerFindAllParams = {
-    /** Search movies by title */
-    search?: any;
-    /** Sort order for movies */
-    sort?: string;
-    /** Number of items per page */
-    limit?: number;
-    /** Page number for pagination */
-    page?: number;
-  };
-
-  type MovieControllerFindOneParams = {
-    id: string;
-  };
-
-  type MovieControllerGetMoviesByCategoryParams = {
-    categoryId: string;
-    /** Search movies by title, description, etc. */
-    search?: string;
-    /** Sort order for movies */
-    sort?: string;
-    /** Number of items per page */
-    limit?: number;
-    /** Page number for pagination */
-    page?: number;
-  };
-
-  type MovieControllerGetNewReleaseMoviesParams = {
-    /** Search movies by title */
-    search?: any;
-    /** Sort order for movies */
-    sort?: string;
-    /** Number of items per page */
-    limit?: number;
-    /** Page number for pagination */
-    page?: number;
-  };
-
-  type MovieControllerGetRecommendationsByMovieIdParams = {
-    movieId: string;
-    /** Search movies by title */
-    search?: any;
-    /** Sort order for movies */
-    sort?: string;
-    /** Number of items per page */
-    limit?: number;
-    /** Page number for pagination */
-    page?: number;
-  };
-
-  type MovieControllerGetTrendingMoviesParams = {
-    /** Search movies by title */
-    search?: any;
-    /** Sort order for movies */
-    sort?: string;
-    /** Number of items per page */
-    limit?: number;
-    /** Page number for pagination */
-    page?: number;
-  };
-
-  type MovieControllerUpdateParams = {
-    id: string;
   };
 
   type MovieDto = {
@@ -857,29 +839,90 @@ declare namespace API {
     data: MovieDto;
   };
 
-  type NewsControllerDeleteParams = {
+  type MoviesControllerDeleteMovieParams = {
     id: string;
   };
 
-  type NewsControllerFindAllParams = {
+  type MoviesControllerGetMovieByIdParams = {
+    id: string;
+  };
+
+  type MoviesControllerGetMoviesByCategoryParams = {
+    categoryId: string;
+    /** Search movies by title, description, etc. */
     search?: string;
     sort?: string;
     limit?: number;
     page?: number;
   };
 
-  type NewsControllerFindNewsRelatedParams = {
-    id: string;
+  type MoviesControllerGetMoviesParams = {
+    /** Search movies by title */
+    search?: any;
+    /** Sort order for movies */
+    sort?: string;
+    /** Number of items per page */
+    limit?: number;
+    /** Page number for pagination */
+    page?: number;
+  };
+
+  type MoviesControllerGetNewReleaseMoviesParams = {
+    /** Search movies by title */
+    search?: any;
     sort?: string;
     limit?: number;
     page?: number;
   };
 
-  type NewsControllerFindOneParams = {
+  type MoviesControllerGetRecommendationsByMovieIdParams = {
+    movieId: string;
+    /** Search movies by title */
+    search?: any;
+    sort?: string;
+    limit?: number;
+    page?: number;
+  };
+
+  type MoviesControllerGetTrendingMoviesParams = {
+    /** Search movies by title */
+    search?: any;
+    sort?: string;
+    limit?: number;
+    page?: number;
+  };
+
+  type MoviesControllerUpdateMovieParams = {
     id: string;
   };
 
-  type NewsControllerUpdateParams = {
+  type NewsControllerDeleteNewsParams = {
+    id: string;
+  };
+
+  type NewsControllerGetNewsByIdParams = {
+    id: string;
+  };
+
+  type NewsControllerGetNewsParams = {
+    /** Search news by title/content */
+    search?: any;
+    /** Sort order for news */
+    sort?: string;
+    /** Number of items per page */
+    limit?: number;
+    /** Page number for pagination */
+    page?: number;
+  };
+
+  type NewsControllerGetRelatedNewsParams = {
+    newsId: string;
+    sort?: string;
+    limit?: number;
+    page?: number;
+  };
+
+  type NewsControllerUpdateNewsParams = {
     id: string;
   };
 
@@ -900,10 +943,10 @@ declare namespace API {
     cover_image: string;
     /** Category of the news article */
     category: string[];
-    /** Name of the user who made the review */
-    name: string;
-    /** Avatar URL of the user who made the review */
-    avatar: Record<string, any>;
+    /** Name of the news author */
+    author_name: string;
+    /** Avatar URL of the news author */
+    author_avatar: Record<string, any>;
   };
 
   type NewsDtoPaginatedResponseDto = {
@@ -919,6 +962,12 @@ declare namespace API {
     data: NewsDto;
   };
 
+  type ObjectResponseDto = {
+    statusCode: number;
+    message: string;
+    data: Record<string, any>;
+  };
+
   type OTPResponse = {
     otpExpiryMinutes: number;
   };
@@ -927,24 +976,6 @@ declare namespace API {
     statusCode: number;
     message: string;
     data: OTPResponse;
-  };
-
-  type PaginatedTrendingDataDto = {
-    data: TrendingItemDto[];
-    totalItems: number;
-    itemCount: number;
-    itemsPerPage: number;
-    totalPages: number;
-    currentPage: number;
-  };
-
-  type PaginatedViewStatsDto = {
-    data: ViewStatsItemDto[];
-    totalItems: number;
-    itemCount: number;
-    itemsPerPage: number;
-    totalPages: number;
-    currentPage: number;
   };
 
   type PaginationMeta = {
@@ -1006,24 +1037,6 @@ declare namespace API {
     meta: PaginationMeta;
   };
 
-  type RecommendationDto = {
-    /** Unique identifier of the entity */
-    id: string;
-    /** Creation date of the entity */
-    createdAt: string;
-    /** Last update date of the entity */
-    updatedAt: string;
-    /** Full content metadata including description, release date, rating, etc. */
-    metaData: ContentDto;
-  };
-
-  type RecommendationDtoPaginatedResponseDto = {
-    statusCode: number;
-    message: string;
-    data: RecommendationDto[];
-    meta: PaginationMeta;
-  };
-
   type RegisterRequest = {
     /** User full name */
     name: string;
@@ -1052,17 +1065,11 @@ declare namespace API {
     otp: string;
   };
 
-  type ReportControllerApproveItemParams = {
-    type: string;
+  type ReportControllerApproveParams = {
     id: string;
   };
 
-  type ReportControllerBanItemParams = {
-    type: string;
-    id: string;
-  };
-
-  type ReportControllerDeleteReportParams = {
+  type ReportControllerDeleteParams = {
     id: string;
   };
 
@@ -1083,13 +1090,7 @@ declare namespace API {
     id: string;
   };
 
-  type ReportControllerRejectItemParams = {
-    type: string;
-    id: string;
-  };
-
-  type ReportControllerUnbanItemParams = {
-    type: string;
+  type ReportControllerRejectParams = {
     id: string;
   };
 
@@ -1354,36 +1355,12 @@ declare namespace API {
   };
 
   type SocialLoginRequest = {
-    /** Social provider */
-    provider: "google" | "facebook";
     /** Access token from social provider */
     accessToken: string;
   };
 
-  type TagControllerFindAllParams = {
-    /** Search tags by name */
-    search?: any;
-    /** Sort order for tags */
-    sort?: string;
-    /** Number of items per page */
-    limit?: number;
-    /** Page number for pagination */
-    page?: number;
-  };
-
-  type TagControllerFindOneParams = {
-    /** Tag ID */
-    id: string;
-  };
-
-  type TagControllerRemoveParams = {
-    /** Tag ID */
-    id: string;
-  };
-
-  type TagControllerUpdateParams = {
-    /** Tag ID */
-    id: string;
+  type StreamingControllerGetFileAccessParams = {
+    s3Key: string;
   };
 
   type TagDto = {
@@ -1395,6 +1372,50 @@ declare namespace API {
     updatedAt: string;
     /** Tag name */
     tagName: string;
+  };
+
+  type TagDtoPaginatedResponseDto = {
+    statusCode: number;
+    message: string;
+    data: TagDto[];
+    meta: PaginationMeta;
+  };
+
+  type TagDtoResponseDto = {
+    statusCode: number;
+    message: string;
+    data: TagDto;
+  };
+
+  type TagsControllerDeleteTagParams = {
+    /** Tag ID */
+    id: string;
+  };
+
+  type TagsControllerGetTagByIdParams = {
+    /** Tag ID */
+    id: string;
+  };
+
+  type TagsControllerGetTagsParams = {
+    /** Search tags by name */
+    search?: any;
+    /** Sort order for tags */
+    sort?: string;
+    /** Number of items per page */
+    limit?: number;
+    /** Page number for pagination */
+    page?: number;
+  };
+
+  type TagsControllerSearchTagsParams = {
+    /** Search tags by name */
+    q: string;
+  };
+
+  type TagsControllerUpdateTagParams = {
+    /** Tag ID */
+    id: string;
   };
 
   type TokenRequest = {
@@ -1421,9 +1442,16 @@ declare namespace API {
     poster: string;
     rating: number;
     views: number;
-    trend: string;
+    trend: "up" | "down";
     change: string;
     engagement: number;
+  };
+
+  type TrendingItemDtoPaginatedResponseDto = {
+    statusCode: number;
+    message: string;
+    data: TrendingItemDto[];
+    meta: PaginationMeta;
   };
 
   type TVSeriesCategory = {
@@ -1435,51 +1463,44 @@ declare namespace API {
     tvSeriesCount: number;
   };
 
-  type TVSeriesCategoryPaginatedResponseDto = {
+  type TVSeriesCategoryResponseDto = {
     statusCode: number;
     message: string;
     data: TVSeriesCategory[];
-    meta: PaginationMeta;
   };
 
-  type TvSeriesControllerFindAllParams = {
-    /** Filter movies by date range (e.g., {"range":"last_month"}) */
-    filter?: any;
-    /** Search movies by title */
-    search?: any;
-    /** Sort order for movies */
-    sort?: string;
-    /** Number of items per page */
-    limit?: number;
-    /** Page number for pagination */
-    page?: number;
-  };
-
-  type TvSeriesControllerFindOneParams = {
+  type TvSeriesControllerDeleteTvSeriesParams = {
     id: string;
   };
 
-  type TvSeriesControllerGetRecommendationsParams = {
+  type TvSeriesControllerGetRelatedTvSeriesParams = {
     id: string;
-    /** Number of items per page */
     limit?: number;
-    /** Page number for pagination */
     page?: number;
   };
 
-  type TvSeriesControllerGetTrendingSeriesParams = {
+  type TvSeriesControllerGetTrendingTvSeriesParams = {
     /** Search TV series by title */
     search?: any;
-    /** Sort order for TV series */
     sort?: string;
-    /** Number of items per page */
     limit?: number;
-    /** Page number for pagination */
     page?: number;
   };
 
-  type TvSeriesControllerGetTvSeriesByCategoryIdParams = {
+  type TvSeriesControllerGetTvSeriesByCategoryParams = {
     categoryId: string;
+    /** Search TV series by title */
+    search?: string;
+    sort?: string;
+    limit?: number;
+    page?: number;
+  };
+
+  type TvSeriesControllerGetTvSeriesByIdParams = {
+    id: string;
+  };
+
+  type TvSeriesControllerGetTvSeriesParams = {
     /** Search TV series by title */
     search?: any;
     /** Sort order for TV series */
@@ -1491,21 +1512,12 @@ declare namespace API {
   };
 
   type TvSeriesControllerGetTvSeriesWithNewEpisodesParams = {
-    /** Search TV series by title */
-    search?: any;
-    /** Sort order for TV series */
     sort?: string;
-    /** Number of items per page */
     limit?: number;
-    /** Page number for pagination */
     page?: number;
   };
 
-  type TvSeriesControllerRemoveParams = {
-    id: string;
-  };
-
-  type TvSeriesControllerUpdateParams = {
+  type TvSeriesControllerUpdateTvSeriesParams = {
     id: string;
   };
 
@@ -1520,12 +1532,6 @@ declare namespace API {
     metaData: ContentDto;
     /** List of season information */
     seasons: SeasonDto[];
-  };
-
-  type TVSeriesDtoResponseDto = {
-    statusCode: number;
-    message: string;
-    data: TVSeriesDto;
   };
 
   type TVSeriesSummaryDto = {
@@ -1545,26 +1551,6 @@ declare namespace API {
     statusCode: number;
     message: string;
     data: TVSeriesSummaryDto[];
-    meta: PaginationMeta;
-  };
-
-  type TVSeriesWithNewEpisode = {
-    /** Unique identifier of the entity */
-    id: string;
-    /** Creation date of the entity */
-    createdAt: string;
-    /** Last update date of the entity */
-    updatedAt: string;
-    /** Metadata about the TV series */
-    metaData: ContentDto;
-    /** Latest episode information */
-    latestEpisode: EpisodeDto;
-  };
-
-  type TVSeriesWithNewEpisodePaginatedResponseDto = {
-    statusCode: number;
-    message: string;
-    data: TVSeriesWithNewEpisode[];
     meta: PaginationMeta;
   };
 
@@ -1700,6 +1686,10 @@ declare namespace API {
     cover_image: string;
     /** Category of the news article */
     category: string[];
+    /** Name of the news author */
+    author_name: string;
+    /** Avatar URL of the news author */
+    author_avatar: Record<string, any>;
   };
 
   type UpdateProfileRequest = {
@@ -1940,34 +1930,17 @@ declare namespace API {
     userMetrics: UserMetricsDto;
   };
 
+  type UserStatsDtoResponseDto = {
+    statusCode: number;
+    message: string;
+    data: UserStatsDto;
+  };
+
   type UserSummaryDto = {
     totalUsers: number;
     activeUsers: number;
     newUsers: number;
     churnRate: number;
-  };
-
-  type VideoControllerDeleteParams = {
-    id: string;
-  };
-
-  type VideoControllerFindAllParams = {
-    /** Search videos by title */
-    search?: any;
-    /** Sort order for videos */
-    sort?: string;
-    /** Number of items per page */
-    limit?: number;
-    /** Page number for pagination */
-    page?: number;
-  };
-
-  type VideoControllerFindOneParams = {
-    id: string;
-  };
-
-  type VideoControllerUpdateParams = {
-    id: string;
   };
 
   type VideoDto = {
@@ -1996,10 +1969,50 @@ declare namespace API {
     meta: PaginationMeta;
   };
 
-  type VideoDtoResponseDto = {
+  type VideosControllerDeleteVideoParams = {
+    id: string;
+  };
+
+  type VideosControllerGetVideoByIdParams = {
+    id: string;
+  };
+
+  type VideosControllerGetVideosParams = {
+    /** Search videos by title */
+    search?: any;
+    /** Sort order for videos */
+    sort?: string;
+    /** Number of items per page */
+    limit?: number;
+    /** Page number for pagination */
+    page?: number;
+  };
+
+  type VideosControllerUpdateVideoParams = {
+    id: string;
+  };
+
+  type ViewForecastDayDto = {
+    day: string;
+    views: number;
+  };
+
+  type ViewForecastItemDto = {
+    contentId: string;
+    title: string;
+    contentType: string;
+    historyViews: ViewForecastDayDto[];
+    last7Avg: number;
+    next7DaysViews: number[];
+    totalForecast7d: number;
+    predictedTrend: "up" | "down";
+  };
+
+  type ViewForecastItemDtoPaginatedResponseDto = {
     statusCode: number;
     message: string;
-    data: VideoDto;
+    data: ViewForecastItemDto[];
+    meta: PaginationMeta;
   };
 
   type ViewStatsItemDto = {
@@ -2007,9 +2020,16 @@ declare namespace API {
     title: string;
     name: string;
     views: number;
-    trending: string;
+    trending: "up" | "down";
     change: string;
     percentage: number;
+  };
+
+  type ViewStatsItemDtoPaginatedResponseDto = {
+    statusCode: number;
+    message: string;
+    data: ViewStatsItemDto[];
+    meta: PaginationMeta;
   };
 
   type WatchListControllerCheckInWatchListByMovieIdParams = {
@@ -2046,15 +2066,12 @@ declare namespace API {
   };
 
   type WatchProgressControllerGetAllWatchProgressParams = {
-    /** Filter by completion status */
     isCompleted?: boolean;
     /** Search by content title */
     search?: any;
     /** Sort order */
     sort?: string;
-    /** Number of items per page */
     limit?: number;
-    /** Page number for pagination */
     page?: number;
   };
 
@@ -2063,9 +2080,7 @@ declare namespace API {
   };
 
   type WatchProgressControllerGetWatchHistoryParams = {
-    /** Number of items per page */
     limit?: number;
-    /** Page number for pagination */
     page?: number;
   };
 
@@ -2077,7 +2092,7 @@ declare namespace API {
     videoId: string;
   };
 
-  type WatchProgressControllerUpdateProgressParams = {
+  type WatchProgressControllerUpdateWatchProgressParams = {
     videoId: string;
   };
 

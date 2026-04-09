@@ -7,7 +7,7 @@ import {
   reviewControllerCheckReviewOwner,
   reviewControllerUpdateReview,
   reviewControllerDeleteReview,
-} from "@/apis/api/reviews";
+} from "@/apis/api/review";
 import { toast } from "sonner";
 
 interface UseReviewsManagementProps {
@@ -41,7 +41,7 @@ export function useReviewsManagement({
       if (!userId || reviewIds.length === 0) return;
 
       const ownershipResults = await Promise.allSettled(
-        reviewIds.map((id) => reviewControllerCheckReviewOwner({ id }))
+        reviewIds.map((id) => reviewControllerCheckReviewOwner({ id })),
       );
 
       const ownershipMap: Record<string, boolean> = {};
@@ -56,7 +56,7 @@ export function useReviewsManagement({
 
       setReviewOwnership((prev) => ({ ...prev, ...ownershipMap }));
     },
-    [userId]
+    [userId],
   );
 
   //  Fetch reviews
@@ -75,7 +75,7 @@ export function useReviewsManagement({
         setReviews(data.data);
         setTotalReviews(data.meta?.totalItems || 0);
         setHasMore(
-          data.meta ? data.meta.currentPage < data.meta.totalPages : false
+          data.meta ? data.meta.currentPage < data.meta.totalPages : false,
         );
         setCurrentPage(1);
 
@@ -114,7 +114,7 @@ export function useReviewsManagement({
         setReviews((prev) => [...prev, ...data.data]);
         setCurrentPage(nextPage);
         setHasMore(
-          data.meta ? data.meta.currentPage < data.meta.totalPages : false
+          data.meta ? data.meta.currentPage < data.meta.totalPages : false,
         );
 
         // Check ownership for new reviews
@@ -167,14 +167,14 @@ export function useReviewsManagement({
       } catch (err) {
         console.error("Error submitting review:", err);
         toast.error(
-          err instanceof Error ? err.message : "Không thể gửi đánh giá"
+          err instanceof Error ? err.message : "Không thể gửi đánh giá",
         );
         return false;
       } finally {
         setIsSubmitting(false);
       }
     },
-    [contentId, checkOwnership]
+    [contentId, checkOwnership],
   );
 
   //  Update review
@@ -199,8 +199,8 @@ export function useReviewsManagement({
                     contentReviewed: data.data.contentReviewed,
                     updatedAt: data.data.updatedAt,
                   }
-                : review
-            )
+                : review,
+            ),
           );
 
           toast.success("Cập nhật đánh giá thành công!");
@@ -210,14 +210,14 @@ export function useReviewsManagement({
       } catch (err) {
         console.error("Error updating review:", err);
         toast.error(
-          err instanceof Error ? err.message : "Không thể cập nhật đánh giá"
+          err instanceof Error ? err.message : "Không thể cập nhật đánh giá",
         );
         return false;
       } finally {
         setIsUpdating(false);
       }
     },
-    [contentId]
+    [contentId],
   );
 
   //  Delete review
@@ -240,7 +240,7 @@ export function useReviewsManagement({
     } catch (err) {
       console.error("Error deleting review:", err);
       toast.error(
-        err instanceof Error ? err.message : "Không thể xóa đánh giá"
+        err instanceof Error ? err.message : "Không thể xóa đánh giá",
       );
       return false;
     } finally {

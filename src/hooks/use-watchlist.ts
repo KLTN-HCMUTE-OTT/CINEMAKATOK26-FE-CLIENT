@@ -6,6 +6,7 @@ import {
   watchListControllerCheckInWatchListByMovieId,
 } from "@/apis/api/watchList";
 import { toast } from "sonner";
+import { isAuthenticated } from "@/lib/auth";
 
 interface UseWatchlistOptions {
   movieId?: string;
@@ -28,9 +29,7 @@ export function useWatchlist({
 
   // Check if user is logged in
   const isLoggedIn = () => {
-    if (typeof window === "undefined") return false;
-    const accessToken = localStorage.getItem("accessToken");
-    return !!accessToken;
+    return isAuthenticated();
   };
 
   // Check if movie/content is in watchlist

@@ -10,9 +10,11 @@ import {
   EpisodeReviewProvider,
   useEpisodeReview,
 } from "@/contexts/episode-review-context";
+import { useUIStore } from "@/store";
 
 function EpisodeReviewContent({ episodeId }: { episodeId: string }) {
   const auth = useAuth();
+  const openLoginModal = useUIStore((s) => s.openLoginModal);
   const {
     userReview,
     allReviews,
@@ -44,7 +46,7 @@ function EpisodeReviewContent({ episodeId }: { episodeId: string }) {
   const handleSubmitReview = async () => {
     if (!auth.user) {
       toast.error("Vui lòng đăng nhập để gửi đánh giá");
-      window.dispatchEvent(new Event("open-login-modal"));
+      openLoginModal();
       return;
     }
     try {

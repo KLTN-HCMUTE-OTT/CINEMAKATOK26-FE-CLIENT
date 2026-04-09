@@ -5,12 +5,11 @@ import {
   userControllerGetProfile,
   userControllerUpdateProfile,
   userControllerUpdateAvatar,
-} from "@/apis/api/user";
-import { useAuth } from "./use-auth";
-import { updateUserInLocalStorage } from "@/lib/auth";
+} from "@/apis/api/users";
+import { useAuthStore } from "@/store";
 
 export function useProfile() {
-  const { checkAuth } = useAuth();
+  const updateUser = useAuthStore((s) => s.updateUser);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -51,15 +50,11 @@ export function useProfile() {
           phoneNumber: data.phoneNumber || "",
         } as any);
 
-        // Update user in localStorage
-        updateUserInLocalStorage({
+        updateUser({
           name: data.name,
           avatar: data.avatar,
           gender: data.gender,
         });
-
-        // Refresh auth state
-        checkAuth();
 
         return (response as any).data.data;
       } catch (err: any) {
@@ -70,7 +65,7 @@ export function useProfile() {
         setIsLoading(false);
       }
     },
-    [checkAuth]
+    [updateUser],
   );
 
   const updateAvatar = useCallback(
@@ -80,11 +75,7 @@ export function useProfile() {
       try {
         const response = await userControllerUpdateAvatar({ avatarUrl });
 
-        // Update avatar in localStorage
-        updateUserInLocalStorage({ avatar: avatarUrl });
-
-        // Refresh auth state
-        checkAuth();
+        updateUser({ avatar: avatarUrl });
 
         return (response as any).data.data;
       } catch (err: any) {
@@ -95,7 +86,7 @@ export function useProfile() {
         setIsLoading(false);
       }
     },
-    [checkAuth]
+    [updateUser],
   );
 
   return {

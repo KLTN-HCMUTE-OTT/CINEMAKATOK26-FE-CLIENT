@@ -1,9 +1,8 @@
 "use client";
 
-import { categoryControllerFindAll } from "@/apis/api/categories";
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
-import { date } from "zod";
+import { categoriesControllerGetCategories } from "@/apis/api/categories";
 
 interface UseCategoriesResult {
   categories: API.CategoryDto[];
@@ -18,7 +17,7 @@ export function useCategories(): UseCategoriesResult {
   useEffect(() => {
     const fetchCategories = async () => {
       try {
-        const response = await categoryControllerFindAll({
+        const response = await categoriesControllerGetCategories({
           page: 1,
           limit: 100,
         });

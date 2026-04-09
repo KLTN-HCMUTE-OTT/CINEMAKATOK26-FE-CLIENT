@@ -4,11 +4,10 @@ import { useState, useEffect } from "react";
 import { X, Eye, EyeOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
-  authControllerSendRegisterOtp,
+  authControllerRegister,
   authControllerResendRegisterOtp,
-  authControllerRegisterWithOtp,
+  authControllerRegisterVerify,
 } from "@/apis/api/auth";
-import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Portal } from "@/components/ui/portal";
 
@@ -40,7 +39,6 @@ function RegisterModal({
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
   const [otpSent, setOtpSent] = useState(false);
-  const router = useRouter();
 
   // Animation effect
   useEffect(() => {
@@ -90,7 +88,7 @@ function RegisterModal({
       setIsLoading(true);
       setError("");
 
-      const response = await authControllerSendRegisterOtp({
+      const response = await authControllerRegister({
         name,
         email,
         password,
@@ -120,7 +118,7 @@ function RegisterModal({
         ) {
           // Extract all error messages from the error object
           const errorMessages = Object.values(errorData.error).filter(
-            (msg) => typeof msg === "string"
+            (msg) => typeof msg === "string",
           );
           if (errorMessages.length > 0) {
             errorMessage = errorMessages.join(". ");
@@ -174,7 +172,7 @@ function RegisterModal({
         ) {
           // Extract all error messages from the error object
           const errorMessages = Object.values(errorData.error).filter(
-            (msg) => typeof msg === "string"
+            (msg) => typeof msg === "string",
           );
           if (errorMessages.length > 0) {
             errorMessage = errorMessages.join(". ");
@@ -215,7 +213,7 @@ function RegisterModal({
     }
 
     try {
-      const response = await authControllerRegisterWithOtp({
+      const response = await authControllerRegisterVerify({
         name,
         email,
         password,
@@ -226,7 +224,7 @@ function RegisterModal({
       if (response?.data?.statusCode === 201) {
         // Show success message
         toast.success(
-          "Registration successful! Please login with your credentials."
+          "Registration successful! Please login with your credentials.",
         );
 
         // Close modal and switch to login
@@ -255,7 +253,7 @@ function RegisterModal({
         ) {
           // Extract all error messages from the error object
           const errorMessages = Object.values(errorData.error).filter(
-            (msg) => typeof msg === "string"
+            (msg) => typeof msg === "string",
           );
           if (errorMessages.length > 0) {
             errorMessage = errorMessages.join(". ");
@@ -484,10 +482,10 @@ function RegisterModal({
                 {isLoading
                   ? "..."
                   : canSendOtp
-                  ? otpSent
-                    ? "Resend"
-                    : "Send"
-                  : `${otpTimer}s`}
+                    ? otpSent
+                      ? "Resend"
+                      : "Send"
+                    : `${otpTimer}s`}
               </button>
             </div>
 
