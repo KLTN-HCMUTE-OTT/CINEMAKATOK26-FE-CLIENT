@@ -8,7 +8,7 @@ import { useState, useEffect } from "react";
 import { getS3Url } from "@/hooks/aws";
 import { ResumeDialog } from "@/components/ui/resume-dialog";
 import { useWatchProgress } from "@/hooks/use-watch-progress";
-import { videoControllerFindOne } from "@/apis/api/video";
+import { videosControllerGetVideoById } from "@/apis/api/videos";
 import MovieVideoPlayerComponent from "../ui/video-player/movie-video-player";
 interface MovieDetailHeroVideoProps {
   title: string;
@@ -48,9 +48,9 @@ export function MovieDetailHeroVideo({
 
   useEffect(() => {
     if (videoId) {
-      videoControllerFindOne({ id: videoId })
+      videosControllerGetVideoById({ id: videoId })
         .then((res) => {
-          setVideoDetails(res.data.data);
+          setVideoDetails(res.data);
         })
         .catch((err) => console.error("Failed to fetch video details", err));
     }

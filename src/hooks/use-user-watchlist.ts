@@ -1,19 +1,20 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   watchListControllerGetUserWatchList,
   watchListControllerRemoveFromWatchList,
 } from "@/apis/api/watchList";
 import { toast } from "sonner";
+import { queryKeys } from "@/lib/query-keys";
 
 interface WatchlistItem {
-  id: string; // ID của watchlist record
+  id: string;
   createdAt: string;
   updatedAt?: string;
   content: {
-    id: string; // ID của movie/tvseries
-    contentId: string; // Content ID
+    id: string;
+    contentId: string;
     title: string;
     type: "MOVIE" | "TVSERIES";
     thumbnail?: string;
@@ -28,9 +29,9 @@ interface WatchlistItem {
 
 // Transformed data for WatchListCard component
 export interface WatchlistCardData {
-  id: string; // Watchlist record ID (for selection in edit mode)
-  contentId: string; // Movie/TVSeries ID (for navigation)
-  movieContentId: string; // Content ID from API (for removal)
+  id: string;
+  contentId: string;
+  movieContentId: string;
   type: string;
   title: string;
   image: string;
@@ -47,202 +48,146 @@ interface UseUserWatchlistOptions {
   autoFetch?: boolean;
 }
 
+// Transform WatchlistItem to WatchlistCardData
+function transformWatchlistItem(item: WatchlistItem): WatchlistCardData {
+  const { content, id } = item;
+
+  const year = content.releaseDate
+    ? new Date(content.releaseDate).getFullYear().toString()
+    : "N/A";
+
+  const duration = content.duration
+    ? `${Math.floor(content.duration / 60)} hr ${content.duration % 60} mins`
+    : "N/A";
+
+  let genres: string[] = [];
+  if (content.categories) {
+    if (Array.isArray(content.categories)) {
+      if (typeof content.categories[0] === "string") {
+        genres = content.categories as string[];
+      } else {
+        genres = (
+          content.categories as Array<{ id: string; name: string }>
+        ).map((cat) => cat.name);
+      }
+    }
+  }
+
+  const image = content.thumbnail
+    ? content.thumbnail.startsWith("http")
+      ? content.thumbnail
+      : `https://image.tmdb.org/t/p/w500${content.thumbnail}`
+    : "/default_banner.jpg";
+
+  const rating = content.maturityRating || "NR";
+
+  return {
+    id,
+    contentId: content.id,
+    movieContentId: content.contentId,
+    type: content.type,
+    title: content.title,
+    image,
+    genres,
+    year,
+    duration,
+    rating,
+    youtubeTrailerUrl: content.trailer,
+  };
+}
+
 /**
  * Hook to fetch and manage user's watchlist
  */
 export function useUserWatchlist(options: UseUserWatchlistOptions = {}) {
   const { page = 1, limit = 100, autoFetch = true } = options;
+  const queryClient = useQueryClient();
 
-  const [watchlist, setWatchlist] = useState<WatchlistCardData[]>([]);
-  const [rawWatchlist, setRawWatchlist] = useState<WatchlistItem[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
-  const [isDeleting, setIsDeleting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [totalItems, setTotalItems] = useState(0);
-  const [totalPages, setTotalPages] = useState(0);
-
-  // Transform WatchlistItem to WatchlistCardData
-  const transformWatchlistItem = (item: WatchlistItem): WatchlistCardData => {
-    const { content, id } = item;
-
-    // Extract year from releaseDate
-    const year = content.releaseDate
-      ? new Date(content.releaseDate).getFullYear().toString()
-      : "N/A";
-
-    // Format duration
-    const duration = content.duration
-      ? `${Math.floor(content.duration / 60)} hr ${content.duration % 60} mins`
-      : "N/A";
-
-    // Get genres - handle both string[] and object[]
-    let genres: string[] = [];
-    if (content.categories) {
-      if (Array.isArray(content.categories)) {
-        if (typeof content.categories[0] === "string") {
-          genres = content.categories as string[];
-        } else {
-          genres = (
-            content.categories as Array<{ id: string; name: string }>
-          ).map((cat) => cat.name);
-        }
-      }
-    }
-    // Get image - use thumbnail or placeholder
-    const image = content.thumbnail
-      ? content.thumbnail.startsWith("http")
-        ? content.thumbnail
-        : `https://image.tmdb.org/t/p/w500${content.thumbnail}`
-      : "/default_banner.jpg";
-
-    // Get rating
-    const rating = content.maturityRating || "NR";
-
-    return {
-      id, // Watchlist record ID (for selection)
-      contentId: content.id, // Movie/TVSeries ID (for navigation to /movies/{id})
-      movieContentId: content.contentId, // Content ID (for API removal)
-      type: content.type,
-      title: content.title,
-      image,
-      genres,
-      year,
-      duration,
-      rating,
-      youtubeTrailerUrl: content.trailer,
-    };
-  };
-
-  const fetchWatchlist = async () => {
-    try {
-      setIsLoading(true);
-      setError(null);
-
+  const watchlistQuery = useQuery({
+    queryKey: [...queryKeys.watchlist.all, "user", page, limit] as const,
+    queryFn: async () => {
       const response = await watchListControllerGetUserWatchList({
         page,
         limit,
       });
 
-      if (response.data) {
-        // Handle response based on structure
-        const data = response.data.data || response.data;
+      const data = response.data?.data || response.data;
+      let items: WatchlistItem[] = [];
+      let totalItems = 0;
+      let totalPages = 0;
 
-        let items: WatchlistItem[] = [];
-
-        if (Array.isArray(data)) {
-          items = data;
-          setTotalItems(data.length);
-        } else if (data.items && Array.isArray(data.items)) {
-          items = data.items;
-          setTotalItems(data.total || data.items.length);
-          setTotalPages(
-            data.totalPages || Math.ceil((data.total || 0) / limit)
-          );
-        }
-
-        setRawWatchlist(items);
-        // Transform items for card display
-        const transformedItems = items.map(transformWatchlistItem);
-        setWatchlist(transformedItems);
-
-        console.log(
-          "Transformed watchlist:",
-          transformedItems.length > 0 ? transformedItems[0] : "empty"
-        );
+      if (Array.isArray(data)) {
+        items = data;
+        totalItems = data.length;
+      } else if (data?.items && Array.isArray(data.items)) {
+        items = data.items;
+        totalItems = data.total || data.items.length;
+        totalPages = data.totalPages || Math.ceil((data.total || 0) / limit);
       }
-    } catch (err: any) {
-      console.error("Error fetching watchlist:", err);
-      const errorMessage =
-        err?.response?.data?.message || "Failed to fetch watchlist";
-      setError(errorMessage);
-      toast.error(errorMessage);
-    } finally {
-      setIsLoading(false);
-    }
-  };
 
-  // Remove item from watchlist with API call
-  const removeFromWatchlist = async (movieContentId: string) => {
-    try {
-      setIsDeleting(true);
+      return {
+        items,
+        transformedItems: items.map(transformWatchlistItem),
+        totalItems,
+        totalPages,
+      };
+    },
+    enabled: autoFetch,
+    staleTime: 30 * 1000,
+  });
 
-      // Use movieContentId (content.contentId from API)
+  // Remove single item mutation
+  const removeMutation = useMutation({
+    mutationFn: async (movieContentId: string) => {
       await watchListControllerRemoveFromWatchList({
         contentId: movieContentId,
       });
-
-      // Update local state
-      setWatchlist((prev) =>
-        prev.filter((item) => item.movieContentId !== movieContentId)
-      );
-      setRawWatchlist((prev) =>
-        prev.filter((item) => item.content.contentId !== movieContentId)
-      );
-      setTotalItems((prev) => Math.max(0, prev - 1));
-
+      return movieContentId;
+    },
+    onSuccess: () => {
       toast.success("Removed from watchlist");
-    } catch (err: any) {
-      console.error("Error removing from watchlist:", err);
+      queryClient.invalidateQueries({ queryKey: queryKeys.watchlist.all });
+    },
+    onError: (err: any) => {
       const errorMessage =
         err?.response?.data?.message || "Failed to remove from watchlist";
       toast.error(errorMessage);
-      throw err;
-    } finally {
-      setIsDeleting(false);
-    }
-  };
+    },
+  });
 
-  // Remove multiple items from watchlist
-  const removeMultipleFromWatchlist = async (movieContentIds: string[]) => {
-    try {
-      setIsDeleting(true);
-
-      console.log("Removing multiple movieContentIds:", movieContentIds);
-
-      // Remove all items in parallel
+  // Remove multiple items mutation
+  const removeMultipleMutation = useMutation({
+    mutationFn: async (movieContentIds: string[]) => {
       await Promise.all(
         movieContentIds.map((movieContentId) =>
-          watchListControllerRemoveFromWatchList({ contentId: movieContentId })
-        )
+          watchListControllerRemoveFromWatchList({ contentId: movieContentId }),
+        ),
       );
-
-      // Update local state
-      setWatchlist((prev) =>
-        prev.filter((item) => !movieContentIds.includes(item.movieContentId))
+      return movieContentIds;
+    },
+    onSuccess: (_data, movieContentIds) => {
+      toast.success(
+        `Removed ${movieContentIds.length} item(s) from watchlist`,
       );
-      setRawWatchlist((prev) =>
-        prev.filter((item) => !movieContentIds.includes(item.content.contentId))
-      );
-      setTotalItems((prev) => Math.max(0, prev - movieContentIds.length));
-
-      toast.success(`Removed ${movieContentIds.length} item(s) from watchlist`);
-    } catch (err: any) {
-      console.error("Error removing multiple items:", err);
+      queryClient.invalidateQueries({ queryKey: queryKeys.watchlist.all });
+    },
+    onError: (err: any) => {
       const errorMessage =
         err?.response?.data?.message || "Failed to remove items";
       toast.error(errorMessage);
-      throw err;
-    } finally {
-      setIsDeleting(false);
-    }
-  };
-
-  useEffect(() => {
-    if (autoFetch) {
-      fetchWatchlist();
-    }
-  }, [page, limit, autoFetch]);
+    },
+  });
 
   return {
-    watchlist,
-    rawWatchlist,
-    isLoading,
-    isDeleting,
-    error,
-    totalItems,
-    totalPages,
-    refetch: fetchWatchlist,
-    removeFromWatchlist,
-    removeMultipleFromWatchlist,
+    watchlist: watchlistQuery.data?.transformedItems ?? [],
+    rawWatchlist: watchlistQuery.data?.items ?? [],
+    isLoading: watchlistQuery.isLoading,
+    isDeleting: removeMutation.isPending || removeMultipleMutation.isPending,
+    error: watchlistQuery.error?.message ?? null,
+    totalItems: watchlistQuery.data?.totalItems ?? 0,
+    totalPages: watchlistQuery.data?.totalPages ?? 0,
+    refetch: watchlistQuery.refetch,
+    removeFromWatchlist: removeMutation.mutateAsync,
+    removeMultipleFromWatchlist: removeMultipleMutation.mutateAsync,
   };
 }

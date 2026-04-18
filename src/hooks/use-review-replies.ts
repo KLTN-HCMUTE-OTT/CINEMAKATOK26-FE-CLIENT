@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   reviewReplyControllerGetRepliesForReview,
   reviewReplyControllerCreateReply,
@@ -9,169 +9,139 @@ import {
   reviewReplyControllerGetReplyCountForReview,
 } from "@/apis/api/reviewReplies";
 import { toast } from "sonner";
+import { queryKeys } from "@/lib/query-keys";
 
 export function useReviewReplies(reviewId: string) {
-  const [replies, setReplies] = useState<API.ReviewReplyDto[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [isRefreshing, setIsRefreshing] = useState(false);
-  const [currentPage, setCurrentPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(0);
-  const [totalReplies, setTotalReplies] = useState(0);
-  const [replyCount, setReplyCount] = useState<number | null>(null);
-  const [hasReplies, setHasReplies] = useState(false);
+  const queryClient = useQueryClient();
 
-  // Fetch replies for a review
-  const fetchReplies = useCallback(
-    async (page: number = 1, parentReplyId?: string) => {
-      // Only show loading spinner on initial load
-      if (replies.length === 0) {
-        setLoading(true);
-      } else {
-        setIsRefreshing(true);
-      }
-      try {
-        // When fetching without parentReplyId, explicitly set to "null" for top-level
-        const params: any = {
-          reviewId,
-          page,
-          limit: 10,
-        };
-
-        // Only add parentReplyId if explicitly provided, otherwise use "null" for top-level
-        if (parentReplyId !== undefined) {
-          params.parentReplyId = parentReplyId;
-        } else {
-          params.parentReplyId = "null"; // Fetch only top-level replies
-        }
-
-        const response = await reviewReplyControllerGetRepliesForReview(params);
-
-        const data = (response as any).data;
-
-        if (data?.data) {
-          setReplies(data.data);
-          setCurrentPage(page);
-          setTotalPages(data.meta?.totalPages || 1);
-          setTotalReplies(data.meta?.total || 0);
-        }
-      } catch (error: any) {
-        console.error("Error fetching replies:", error);
-        toast.error("Failed to load replies");
-      } finally {
-        setLoading(false);
-        setIsRefreshing(false);
-      }
+  // Fetch replies query
+  const repliesQuery = useQuery({
+    queryKey: queryKeys.replies.forReview(reviewId, 1),
+    queryFn: async () => {
+      const params: any = {
+        reviewId,
+        page: 1,
+        limit: 10,
+        parentReplyId: "null",
+      };
+      const response = await reviewReplyControllerGetRepliesForReview(params);
+      const data = (response as any).data;
+      return {
+        replies: (data?.data ?? []) as API.ReviewReplyDto[],
+        totalPages: data?.meta?.totalPages || 1,
+        totalReplies: data?.meta?.total || 0,
+      };
     },
-    [reviewId, replies.length]
-  );
+    enabled: !!reviewId,
+    staleTime: 30 * 1000,
+  });
 
-  // Fetch reply count
-  const fetchReplyCount = useCallback(async () => {
-    try {
+  // Reply count query
+  const countQuery = useQuery({
+    queryKey: queryKeys.replies.count(reviewId),
+    queryFn: async () => {
       const response = await reviewReplyControllerGetReplyCountForReview({
         reviewId,
       });
-
-      // Check different response structures
       const data =
         (response as any).data?.data || (response as any).data || response;
-
-      if (data) {
-        const count = data.replyCount || 0;
-        const hasRep = data.hasReplies || false;
-        setReplyCount(count);
-        setHasReplies(hasRep);
-      }
-    } catch (error: any) {
-      console.error("Error fetching reply count:", error);
-      setReplyCount(0);
-      setHasReplies(false);
-    }
-  }, [reviewId]);
-
-  // Create a new reply
-  const createReply = useCallback(
-    async (content: string, parentReplyId?: string) => {
-      try {
-        const response = await reviewReplyControllerCreateReply({
-          content,
-          reviewId,
-          parentReplyId,
-        });
-
-        const data = (response as any).data;
-        if (data?.data) {
-          toast.success(" Reply added successfully");
-          // Always refresh top-level replies - use page 1 to ensure we see the new reply
-          await fetchReplies(1);
-          await fetchReplyCount();
-          return data.data;
-        }
-      } catch (error: any) {
-        console.error("Error creating reply:", error);
-        toast.error(" Failed to submit reply");
-        throw error;
-      }
+      return {
+        replyCount: data?.replyCount || 0,
+        hasReplies: data?.hasReplies || false,
+      };
     },
-    [reviewId, currentPage, fetchReplies, fetchReplyCount]
-  );
+    enabled: !!reviewId,
+    staleTime: 30 * 1000,
+  });
 
-  // Update a reply
-  const updateReply = useCallback(
-    async (replyId: string, content: string) => {
-      try {
-        const response = await reviewReplyControllerUpdateReply(
-          { id: replyId },
-          { content }
-        );
+  const invalidateAll = () => {
+    queryClient.invalidateQueries({
+      queryKey: queryKeys.replies.forReview(reviewId),
+    });
+    queryClient.invalidateQueries({
+      queryKey: queryKeys.replies.count(reviewId),
+    });
+  };
 
-        const data = (response as any).data;
-        if (data?.data) {
-          toast.success(" Reply updated successfully");
-          // Refresh replies
-          await fetchReplies(currentPage);
-          return data.data;
-        }
-      } catch (error: any) {
-        console.error("Error updating reply:", error);
-        toast.error(" Failed to update reply");
-        throw error;
-      }
+  // Create reply mutation
+  const createMutation = useMutation({
+    mutationFn: async ({
+      content,
+      parentReplyId,
+    }: {
+      content: string;
+      parentReplyId?: string;
+    }) => {
+      const response = await reviewReplyControllerCreateReply({
+        content,
+        reviewId,
+        parentReplyId,
+      });
+      return (response as any).data?.data;
     },
-    [currentPage, fetchReplies]
-  );
-
-  // Delete a reply
-  const deleteReply = useCallback(
-    async (replyId: string) => {
-      try {
-        await reviewReplyControllerDeleteReply({ id: replyId });
-        toast.success(" Reply deleted successfully");
-        // Refresh replies and count
-        await fetchReplies(currentPage);
-        await fetchReplyCount();
-      } catch (error: any) {
-        console.error("Error deleting reply:", error);
-        toast.error(" Failed to delete reply");
-        throw error;
-      }
+    onSuccess: () => {
+      toast.success("Reply added successfully");
+      invalidateAll();
     },
-    [currentPage, fetchReplies, fetchReplyCount]
-  );
+    onError: () => {
+      toast.error("Failed to submit reply");
+    },
+  });
+
+  // Update reply mutation
+  const updateMutation = useMutation({
+    mutationFn: async ({
+      replyId,
+      content,
+    }: {
+      replyId: string;
+      content: string;
+    }) => {
+      const response = await reviewReplyControllerUpdateReply(
+        { id: replyId },
+        { content },
+      );
+      return (response as any).data?.data;
+    },
+    onSuccess: () => {
+      toast.success("Reply updated successfully");
+      invalidateAll();
+    },
+    onError: () => {
+      toast.error("Failed to update reply");
+    },
+  });
+
+  // Delete reply mutation
+  const deleteMutation = useMutation({
+    mutationFn: async (replyId: string) => {
+      await reviewReplyControllerDeleteReply({ id: replyId });
+    },
+    onSuccess: () => {
+      toast.success("Reply deleted successfully");
+      invalidateAll();
+    },
+    onError: () => {
+      toast.error("Failed to delete reply");
+    },
+  });
 
   return {
-    replies,
-    loading,
-    isRefreshing,
-    currentPage,
-    totalPages,
-    totalReplies,
-    replyCount,
-    hasReplies,
-    fetchReplies,
-    fetchReplyCount,
-    createReply,
-    updateReply,
-    deleteReply,
+    replies: repliesQuery.data?.replies ?? [],
+    loading: repliesQuery.isLoading,
+    isRefreshing: repliesQuery.isFetching && !repliesQuery.isLoading,
+    currentPage: 1,
+    totalPages: repliesQuery.data?.totalPages ?? 0,
+    totalReplies: repliesQuery.data?.totalReplies ?? 0,
+    replyCount: countQuery.data?.replyCount ?? null,
+    hasReplies: countQuery.data?.hasReplies ?? false,
+    fetchReplies: (page?: number, parentReplyId?: string) =>
+      repliesQuery.refetch(),
+    fetchReplyCount: () => countQuery.refetch(),
+    createReply: (content: string, parentReplyId?: string) =>
+      createMutation.mutateAsync({ content, parentReplyId }),
+    updateReply: (replyId: string, content: string) =>
+      updateMutation.mutateAsync({ replyId, content }),
+    deleteReply: (replyId: string) => deleteMutation.mutateAsync(replyId),
   };
 }

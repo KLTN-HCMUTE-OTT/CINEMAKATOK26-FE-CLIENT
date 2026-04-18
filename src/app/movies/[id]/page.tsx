@@ -6,8 +6,8 @@ import { MovieDetailHeroVideo } from "@/components/movie/movie-detail-hero-video
 import { MovieInfoSection } from "@/components/movie/movie-info-section";
 import { RecommendedMoviesSection } from "@/components/movie/recommended-movies-section";
 import { ReviewsSection } from "@/components/movie/reviews-section";
-import { movieControllerFindOne } from "@/apis/api/movie";
-import { contentControllerIncreaseView } from "@/apis/api/content";
+import { moviesControllerGetMovieById } from "@/apis/api/movies";
+// import { contentsControllerIncreaseView } from "@/apis/api/contents";
 import { ActionsProvider, useActions } from "@/contexts/movie-actions-context";
 import Image from "next/image";
 import { Loader2 } from "lucide-react";
@@ -51,7 +51,7 @@ function MoviePageContent({ movieId }: { movieId: string | undefined }) {
       setError(null);
 
       try {
-        const response = await movieControllerFindOne({ id: movieId });
+        const response = await moviesControllerGetMovieById({ id: movieId });
 
         if (response?.data) {
           setMovieData(response.data);
@@ -89,9 +89,9 @@ function MoviePageContent({ movieId }: { movieId: string | undefined }) {
       if (!metaData?.id) return;
 
       try {
-        await contentControllerIncreaseView({
-          id: metaData.id,
-        });
+        // await contentControllerIncreaseView({
+        //   id: metaData.id,
+        // });
         // Tăng view count locally sau khi API thành công
         setViewCount((prev) => prev + 1);
         console.log("View count increased for content:", metaData.id);
@@ -229,7 +229,7 @@ export default function MoviePage({ params }: Props) {
       if (!movieId) return;
 
       try {
-        const response = await movieControllerFindOne({ id: movieId });
+        const response = await moviesControllerGetMovieById({ id: movieId });
         if (response?.data?.data?.metaData?.id) {
           setInitialContentId(response.data.data.metaData.id);
         }

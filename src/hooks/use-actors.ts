@@ -1,5 +1,6 @@
-import { useState, useEffect } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { actorsControllerGetTopActors } from "@/apis/api/actors";
+import { queryKeys } from "@/lib/query-keys";
 
 interface Actor {
   id: string;
@@ -14,37 +15,19 @@ interface UseTopActorsOptions {
 
 export function useTopActors(options: UseTopActorsOptions = {}) {
   const { limit = 10 } = options;
-  const [actors, setActors] = useState<Actor[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    const fetchTopActors = async () => {
-      try {
-        setIsLoading(true);
-        setError(null);
-
-        const response = await actorsControllerGetTopActors({
-          limit,
-        });
-
-        if (response?.data?.data) {
-          setActors(response.data.data);
-        }
-      } catch (err: any) {
-        console.error("Error fetching top actors:", err);
-        setError(err?.message || "Failed to fetch top actors");
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    fetchTopActors();
-  }, [limit]);
+  const { data, isLoading, error } = useQuery({
+    queryKey: queryKeys.actors.top(limit),
+    queryFn: async () => {
+      const response = await actorsControllerGetTopActors({ limit });
+      return (response?.data?.data ?? []) as Actor[];
+    },
+    staleTime: 10 * 60 * 1000, // 10 minutes
+  });
 
   return {
-    actors,
+    actors: data ?? [],
     isLoading,
-    error,
+    error: error?.message ?? null,
   };
 }

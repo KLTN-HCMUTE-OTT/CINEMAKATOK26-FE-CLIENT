@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useQuery } from "@tanstack/react-query";
 import {
   moviesControllerGetMovies,
   moviesControllerGetTrendingMovies,
@@ -8,77 +8,15 @@ import {
   moviesControllerGetMoviesByCategory,
   moviesControllerGetRecommendationsByMovieId,
 } from "@/apis/api/movies";
-import { toast } from "sonner";
+import { queryKeys } from "@/lib/query-keys";
+
+const MOVIES_STALE_TIME = 5 * 60 * 1000; // 5 minutes
 
 interface UseMoviesResult {
   result: API.MovieDtoPaginatedResponseDto | null;
   isLoading: boolean;
   error: string | null;
-  refetch: () => Promise<void>;
-}
-
-type MovieFetchFunction = (
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  params: any,
-) => Promise<{ data: API.MovieDtoPaginatedResponseDto }>;
-
-/**
- * Generic hook for fetching movies
- * Reduces code duplication across different movie fetch operations
- */
-function useMoviesFetch(
-  fetchFn: MovieFetchFunction,
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  params: any,
-  errorMessage: string,
-): UseMoviesResult {
-  const [result, setResult] = useState<API.MovieDtoPaginatedResponseDto | null>(
-    null,
-  );
-  const [isLoading, setIsLoading] = useState<boolean>(true);
-  const [error, setError] = useState<string | null>(null);
-
-  //  FIX: Stringify params để so sánh stable
-  const paramsString = JSON.stringify(params);
-
-  const fetchMovies = useCallback(async () => {
-    // Skip nếu params là undefined
-    if (params === undefined) {
-      setIsLoading(false);
-      return;
-    }
-
-    setIsLoading(true);
-    setError(null);
-
-    try {
-      const response = await fetchFn(params);
-
-      if (response?.data) {
-        setResult(response.data);
-      }
-    } catch (err: unknown) {
-      const errorMsg = err instanceof Error ? err.message : errorMessage;
-      toast.error(errorMsg);
-      setError(errorMsg);
-      console.error("API Error:", err);
-    } finally {
-      setIsLoading(false);
-    }
-    //  FIX: Depend on paramsString instead of params object
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [paramsString, errorMessage, fetchFn]);
-
-  useEffect(() => {
-    fetchMovies();
-  }, [fetchMovies]);
-
-  return {
-    result,
-    isLoading,
-    error,
-    refetch: fetchMovies,
-  };
+  refetch: () => void;
 }
 
 /**
@@ -87,11 +25,22 @@ function useMoviesFetch(
 export function useAllMovies(
   params?: API.MoviesControllerGetMoviesParams,
 ): UseMoviesResult {
-  return useMoviesFetch(
-    moviesControllerGetMovies,
-    params,
-    "Không thể tải danh sách phim",
-  );
+  const { data, isLoading, error, refetch } = useQuery({
+    queryKey: queryKeys.movies.list({ type: "all", ...params }),
+    queryFn: async () => {
+      const response = await moviesControllerGetMovies(params!);
+      return response.data;
+    },
+    staleTime: MOVIES_STALE_TIME,
+    enabled: params !== undefined,
+  });
+
+  return {
+    result: data ?? null,
+    isLoading,
+    error: error?.message ?? null,
+    refetch,
+  };
 }
 
 /**
@@ -100,11 +49,22 @@ export function useAllMovies(
 export function useTrendingMovies(
   params?: API.MoviesControllerGetTrendingMoviesParams,
 ): UseMoviesResult {
-  return useMoviesFetch(
-    moviesControllerGetTrendingMovies,
-    params,
-    "Không thể tải phim đang thịnh hành",
-  );
+  const { data, isLoading, error, refetch } = useQuery({
+    queryKey: queryKeys.movies.list({ type: "trending", ...params }),
+    queryFn: async () => {
+      const response = await moviesControllerGetTrendingMovies(params!);
+      return response.data;
+    },
+    staleTime: MOVIES_STALE_TIME,
+    enabled: params !== undefined,
+  });
+
+  return {
+    result: data ?? null,
+    isLoading,
+    error: error?.message ?? null,
+    refetch,
+  };
 }
 
 /**
@@ -113,11 +73,22 @@ export function useTrendingMovies(
 export function useNewReleaseMovies(
   params?: API.MoviesControllerGetNewReleaseMoviesParams,
 ): UseMoviesResult {
-  return useMoviesFetch(
-    moviesControllerGetNewReleaseMovies,
-    params,
-    "Không thể tải phim mới phát hành",
-  );
+  const { data, isLoading, error, refetch } = useQuery({
+    queryKey: queryKeys.movies.list({ type: "new-release", ...params }),
+    queryFn: async () => {
+      const response = await moviesControllerGetNewReleaseMovies(params!);
+      return response.data;
+    },
+    staleTime: MOVIES_STALE_TIME,
+    enabled: params !== undefined,
+  });
+
+  return {
+    result: data ?? null,
+    isLoading,
+    error: error?.message ?? null,
+    refetch,
+  };
 }
 
 /**
@@ -128,30 +99,55 @@ export function useMoviesByCategory(
   params?: Omit<API.MoviesControllerGetMoviesByCategoryParams, "categoryId">,
 ): UseMoviesResult {
   const fullParams: API.MoviesControllerGetMoviesByCategoryParams | undefined =
-    categoryId
-      ? {
-          categoryId,
-          ...params,
-        }
+    categoryId && params
+      ? { categoryId, ...params }
       : undefined;
 
-  return useMoviesFetch(
-    moviesControllerGetMoviesByCategory,
-    fullParams,
-    "Không thể tải phim theo thể loại",
-  );
+  const { data, isLoading, error, refetch } = useQuery({
+    queryKey: queryKeys.movies.list({ type: "category", categoryId, ...params }),
+    queryFn: async () => {
+      const response = await moviesControllerGetMoviesByCategory(fullParams!);
+      return response.data;
+    },
+    staleTime: MOVIES_STALE_TIME,
+    enabled: fullParams !== undefined,
+  });
+
+  return {
+    result: data ?? null,
+    isLoading,
+    error: error?.message ?? null,
+    refetch,
+  };
 }
 
+/**
+ * Hook to fetch recommended movies
+ */
 export function useRecommendedMovies(
   params?: API.MoviesControllerGetRecommendationsByMovieIdParams,
 ): UseMoviesResult {
-  return useMoviesFetch(
-    moviesControllerGetRecommendationsByMovieId,
-    params,
-    "Không thể tải phim gợi ý",
-  );
+  const { data, isLoading, error, refetch } = useQuery({
+    queryKey: queryKeys.movies.recommendations(params?.movieId ?? ""),
+    queryFn: async () => {
+      const response = await moviesControllerGetRecommendationsByMovieId(params!);
+      return response.data;
+    },
+    staleTime: MOVIES_STALE_TIME,
+    enabled: params !== undefined,
+  });
+
+  return {
+    result: data ?? null,
+    isLoading,
+    error: error?.message ?? null,
+    refetch,
+  };
 }
 
+/**
+ * Hook to fetch movie data based on type
+ */
 interface UseMovieDataParams {
   type: string;
   categoryId?: string;
@@ -160,6 +156,7 @@ interface UseMovieDataParams {
   sort?: string;
   search?: string;
 }
+
 export function useMovieData({
   type,
   categoryId,
@@ -168,29 +165,20 @@ export function useMovieData({
   sort,
   search,
 }: UseMovieDataParams): UseMoviesResult {
-  //  Memoize params để tránh recreate object
-  const params = useMemo(
-    () => ({ page, limit, sort, search }),
-    [page, limit, sort, search],
-  );
+  const params = { page, limit, sort, search };
 
-  //  Chỉ gọi hook tương ứng với type
   const allMovies = useAllMovies(type === "all" ? params : undefined);
-
   const trendingMovies = useTrendingMovies(
     type === "trending" ? params : undefined,
   );
-
   const newReleaseMovies = useNewReleaseMovies(
     type === "new-release" ? params : undefined,
   );
-
   const moviesByCategory = useMoviesByCategory(
     categoryId || "",
     type === "category" ? params : undefined,
   );
 
-  //  Return data dựa vào type
   switch (type) {
     case "all":
       return allMovies;
@@ -205,7 +193,7 @@ export function useMovieData({
         result: null,
         isLoading: false,
         error: "Invalid movie type",
-        refetch: async () => {},
+        refetch: () => {},
       };
   }
 }
