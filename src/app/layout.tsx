@@ -7,6 +7,7 @@ import { GoogleOAuthProvider } from "@react-oauth/google";
 import { Toaster } from "sonner";
 import { env } from "@/env";
 import { StoreHydrator } from "@/store/store-hydrator";
+import Providers from "./providers";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -27,15 +28,17 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
       <body className={`${inter.variable} font-sans antialiased`}>
-        <GoogleOAuthProvider clientId={env.NEXT_PUBLIC_GOOGLE_CLIENT_ID}>
-          <StoreHydrator />
-          {children}
-          <Analytics />
-          <ScrollToTopButton />
-          <Toaster position="top-right" richColors />
-        </GoogleOAuthProvider>
+        <Providers>
+          <GoogleOAuthProvider clientId={env.NEXT_PUBLIC_GOOGLE_CLIENT_ID}>
+            <StoreHydrator />
+            {children}
+            <Analytics />
+            <ScrollToTopButton />
+            <Toaster position="top-right" richColors />
+          </GoogleOAuthProvider>
+        </Providers>
       </body>
     </html>
   );

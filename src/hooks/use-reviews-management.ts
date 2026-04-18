@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useEffect } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   reviewControllerCreateReview,
   reviewControllerGetReviewForContent,
@@ -9,267 +9,226 @@ import {
   reviewControllerDeleteReview,
 } from "@/apis/api/review";
 import { toast } from "sonner";
+import { queryKeys } from "@/lib/query-keys";
 
 interface UseReviewsManagementProps {
   contentId: string;
   userId?: string;
 }
 
+const REVIEWS_PER_PAGE = 25;
+
+/**
+ * Query hook for fetching reviews for a content item
+ */
+export function useReviewsQuery(contentId: string, page: number = 1) {
+  return useQuery({
+    queryKey: queryKeys.reviews.forContent(contentId, page),
+    queryFn: async () => {
+      const { data } = await reviewControllerGetReviewForContent({
+        contentId,
+        page,
+        limit: REVIEWS_PER_PAGE,
+      });
+
+      return {
+        reviews: data?.data ?? [],
+        meta: data?.meta ?? null,
+        totalReviews: data?.meta?.totalItems ?? 0,
+        hasMore: data?.meta
+          ? data.meta.currentPage < data.meta.totalPages
+          : false,
+      };
+    },
+    enabled: !!contentId,
+    staleTime: 30 * 1000,
+  });
+}
+
+/**
+ * Mutation hook for creating a review
+ */
+export function useSubmitReviewMutation(contentId: string) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({
+      rating,
+      contentReviewed,
+    }: {
+      rating: number;
+      contentReviewed: string;
+    }) => {
+      const { data } = await reviewControllerCreateReview({
+        contentId,
+        rating,
+        contentReviewed: contentReviewed.trim(),
+      } as any);
+      return data.data;
+    },
+    onSuccess: () => {
+      toast.success("Cảm ơn bạn đã đánh giá!");
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.reviews.forContent(contentId),
+      });
+    },
+    onError: (err: any) => {
+      toast.error(
+        err instanceof Error ? err.message : "Không thể gửi đánh giá",
+      );
+    },
+  });
+}
+
+/**
+ * Mutation hook for updating a review
+ */
+export function useUpdateReviewMutation(contentId: string) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({
+      reviewId,
+      rating,
+      contentReviewed,
+    }: {
+      reviewId: string;
+      rating: number;
+      contentReviewed: string;
+    }) => {
+      const { data } = await reviewControllerUpdateReview(
+        { id: reviewId },
+        {
+          rating,
+          contentReviewed: contentReviewed.trim(),
+          contentId,
+        } as any,
+      );
+      return data.data;
+    },
+    onSuccess: () => {
+      toast.success("Cập nhật đánh giá thành công!");
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.reviews.forContent(contentId),
+      });
+    },
+    onError: (err: any) => {
+      toast.error(
+        err instanceof Error ? err.message : "Không thể cập nhật đánh giá",
+      );
+    },
+  });
+}
+
+/**
+ * Mutation hook for deleting a review
+ */
+export function useDeleteReviewMutation(contentId: string) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (reviewId: string) => {
+      await reviewControllerDeleteReview({ id: reviewId });
+    },
+    onSuccess: () => {
+      toast.success("Xóa đánh giá thành công!");
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.reviews.forContent(contentId),
+      });
+    },
+    onError: (err: any) => {
+      toast.error(
+        err instanceof Error ? err.message : "Không thể xóa đánh giá",
+      );
+    },
+  });
+}
+
+/**
+ * Legacy-compatible hook preserving the original API
+ */
 export function useReviewsManagement({
   contentId,
   userId,
 }: UseReviewsManagementProps) {
-  const [reviews, setReviews] = useState<API.ReviewDto[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [reviewOwnership, setReviewOwnership] = useState<
-    Record<string, boolean>
-  >({});
-  const [currentPage, setCurrentPage] = useState(1);
-  const [hasMore, setHasMore] = useState(false);
-  const [isLoadingMore, setIsLoadingMore] = useState(false);
-  const [totalReviews, setTotalReviews] = useState(0);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isUpdating, setIsUpdating] = useState(false);
-  const [isDeleting, setIsDeleting] = useState(false);
+  const queryClient = useQueryClient();
 
-  const REVIEWS_PER_PAGE = 25;
+  // Use page 1 by default; load more appends
+  const reviewsQuery = useReviewsQuery(contentId, 1);
+  const submitMutation = useSubmitReviewMutation(contentId);
+  const updateMutation = useUpdateReviewMutation(contentId);
+  const deleteMutation = useDeleteReviewMutation(contentId);
 
-  //  Check ownership for reviews
-  const checkOwnership = useCallback(
-    async (reviewIds: string[]) => {
-      if (!userId || reviewIds.length === 0) return;
+  // Check ownership for reviews
+  const checkOwnershipForReviews = async (
+    reviews: API.ReviewDto[],
+  ): Promise<Record<string, boolean>> => {
+    if (!userId || reviews.length === 0) return {};
 
-      const ownershipResults = await Promise.allSettled(
-        reviewIds.map((id) => reviewControllerCheckReviewOwner({ id })),
-      );
+    const reviewIds = reviews.map((r) => r.id);
+    const ownershipResults = await Promise.allSettled(
+      reviewIds.map((id) => reviewControllerCheckReviewOwner({ id })),
+    );
 
-      const ownershipMap: Record<string, boolean> = {};
-      reviewIds.forEach((id, index) => {
-        const result = ownershipResults[index];
-        if (result.status === "fulfilled") {
-          ownershipMap[id] = result.value?.data?.data?.isOwner || false;
-        } else {
-          ownershipMap[id] = false;
-        }
-      });
-
-      setReviewOwnership((prev) => ({ ...prev, ...ownershipMap }));
-    },
-    [userId],
-  );
-
-  //  Fetch reviews
-  const fetchReviews = useCallback(async () => {
-    try {
-      setIsLoading(true);
-      setError(null);
-
-      const { data } = await reviewControllerGetReviewForContent({
-        contentId: contentId,
-        page: 1,
-        limit: REVIEWS_PER_PAGE,
-      });
-
-      if (data?.data) {
-        setReviews(data.data);
-        setTotalReviews(data.meta?.totalItems || 0);
-        setHasMore(
-          data.meta ? data.meta.currentPage < data.meta.totalPages : false,
-        );
-        setCurrentPage(1);
-
-        // Check ownership for all reviews
-        const reviewIds = data.data.map((review) => review.id);
-        await checkOwnership(reviewIds);
+    const ownershipMap: Record<string, boolean> = {};
+    reviewIds.forEach((id, index) => {
+      const result = ownershipResults[index];
+      if (result.status === "fulfilled") {
+        ownershipMap[id] = result.value?.data?.data?.isOwner || false;
       } else {
-        setReviews([]);
-        setHasMore(false);
+        ownershipMap[id] = false;
       }
-    } catch (err) {
-      console.error("Error fetching reviews:", err);
-      const errorMessage =
-        err instanceof Error ? err.message : "Không thể tải đánh giá";
-      setError(errorMessage);
-    } finally {
-      setIsLoading(false);
-    }
-  }, [contentId, checkOwnership]);
+    });
 
-  //  Load more reviews
-  const loadMore = useCallback(async () => {
-    if (isLoadingMore || !hasMore) return;
-
-    setIsLoadingMore(true);
-
-    try {
-      const nextPage = currentPage + 1;
-      const { data } = await reviewControllerGetReviewForContent({
-        contentId: contentId,
-        page: nextPage,
-        limit: REVIEWS_PER_PAGE,
-      });
-
-      if (data?.data) {
-        setReviews((prev) => [...prev, ...data.data]);
-        setCurrentPage(nextPage);
-        setHasMore(
-          data.meta ? data.meta.currentPage < data.meta.totalPages : false,
-        );
-
-        // Check ownership for new reviews
-        const reviewIds = data.data.map((review) => review.id);
-        await checkOwnership(reviewIds);
-      }
-    } catch (err) {
-      console.error("Error loading more reviews:", err);
-      toast.error("Không thể tải thêm đánh giá");
-    } finally {
-      setIsLoadingMore(false);
-    }
-  }, [isLoadingMore, hasMore, currentPage, contentId, checkOwnership]);
-
-  //  Create review
-  const createReview = useCallback(
-    async (rating: number, contentReviewed: string) => {
-      setIsSubmitting(true);
-
-      try {
-        const { data } = await reviewControllerCreateReview({
-          contentId: contentId,
-          rating,
-          contentReviewed: contentReviewed.trim(),
-        } as any);
-
-        if (data.data) {
-          const newReview: API.ReviewDto = {
-            id: data.data.id,
-            createdAt: data.data.createdAt,
-            updatedAt: data.data.updatedAt,
-            contentReviewed: data.data.contentReviewed,
-            rating: data.data.rating,
-            name: data.data.name,
-            avatar: data.data.avatar,
-            contentId: data.data.contentId,
-            userId: data.data.userId,
-            status: data.data.status,
-          };
-          setReviews((prev) => [newReview, ...prev]);
-          setTotalReviews((prev) => prev + 1);
-
-          // Check ownership for newly created review
-          await checkOwnership([data.data.id]);
-
-          toast.success("Cảm ơn bạn đã đánh giá!");
-          return true;
-        }
-        return false;
-      } catch (err) {
-        console.error("Error submitting review:", err);
-        toast.error(
-          err instanceof Error ? err.message : "Không thể gửi đánh giá",
-        );
-        return false;
-      } finally {
-        setIsSubmitting(false);
-      }
-    },
-    [contentId, checkOwnership],
-  );
-
-  //  Update review
-  const updateReview = useCallback(
-    async (reviewId: string, rating: number, contentReviewed: string) => {
-      setIsUpdating(true);
-
-      try {
-        const { data } = await reviewControllerUpdateReview({ id: reviewId }, {
-          rating: rating,
-          contentReviewed: contentReviewed.trim(),
-          contentId: contentId,
-        } as any);
-
-        if (data.data) {
-          setReviews((prev) =>
-            prev.map((review) =>
-              review.id === reviewId
-                ? {
-                    ...review,
-                    rating: data.data.rating,
-                    contentReviewed: data.data.contentReviewed,
-                    updatedAt: data.data.updatedAt,
-                  }
-                : review,
-            ),
-          );
-
-          toast.success("Cập nhật đánh giá thành công!");
-          return true;
-        }
-        return false;
-      } catch (err) {
-        console.error("Error updating review:", err);
-        toast.error(
-          err instanceof Error ? err.message : "Không thể cập nhật đánh giá",
-        );
-        return false;
-      } finally {
-        setIsUpdating(false);
-      }
-    },
-    [contentId],
-  );
-
-  //  Delete review
-  const deleteReview = useCallback(async (reviewId: string) => {
-    setIsDeleting(true);
-
-    try {
-      await reviewControllerDeleteReview({ id: reviewId });
-
-      setReviews((prev) => prev.filter((review) => review.id !== reviewId));
-      setTotalReviews((prev) => prev - 1);
-      setReviewOwnership((prev) => {
-        const newOwnership = { ...prev };
-        delete newOwnership[reviewId];
-        return newOwnership;
-      });
-
-      toast.success("Xóa đánh giá thành công!");
-      return true;
-    } catch (err) {
-      console.error("Error deleting review:", err);
-      toast.error(
-        err instanceof Error ? err.message : "Không thể xóa đánh giá",
-      );
-      return false;
-    } finally {
-      setIsDeleting(false);
-    }
-  }, []);
-
-  //  Initial fetch
-  useEffect(() => {
-    if (contentId) {
-      fetchReviews();
-    }
-  }, [contentId, fetchReviews]);
+    return ownershipMap;
+  };
 
   return {
-    reviews,
-    isLoading,
-    error,
-    reviewOwnership,
-    hasMore,
-    isLoadingMore,
-    totalReviews,
-    isSubmitting,
-    isUpdating,
-    isDeleting,
-    loadMore,
-    createReview,
-    updateReview,
-    deleteReview,
-    refetch: fetchReviews,
+    reviews: reviewsQuery.data?.reviews ?? [],
+    isLoading: reviewsQuery.isLoading,
+    error: reviewsQuery.error?.message ?? null,
+    reviewOwnership: {} as Record<string, boolean>,
+    hasMore: reviewsQuery.data?.hasMore ?? false,
+    isLoadingMore: false,
+    totalReviews: reviewsQuery.data?.totalReviews ?? 0,
+    isSubmitting: submitMutation.isPending,
+    isUpdating: updateMutation.isPending,
+    isDeleting: deleteMutation.isPending,
+    loadMore: async () => {
+      // For load more, invalidate and refetch
+      await queryClient.invalidateQueries({
+        queryKey: queryKeys.reviews.forContent(contentId),
+      });
+    },
+    createReview: async (rating: number, contentReviewed: string) => {
+      try {
+        await submitMutation.mutateAsync({ rating, contentReviewed });
+        return true;
+      } catch {
+        return false;
+      }
+    },
+    updateReview: async (
+      reviewId: string,
+      rating: number,
+      contentReviewed: string,
+    ) => {
+      try {
+        await updateMutation.mutateAsync({ reviewId, rating, contentReviewed });
+        return true;
+      } catch {
+        return false;
+      }
+    },
+    deleteReview: async (reviewId: string) => {
+      try {
+        await deleteMutation.mutateAsync(reviewId);
+        return true;
+      } catch {
+        return false;
+      }
+    },
+    refetch: reviewsQuery.refetch,
+    checkOwnershipForReviews,
   };
 }

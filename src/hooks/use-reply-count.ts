@@ -1,42 +1,30 @@
 "use client";
 
-import { useState, useCallback, useEffect } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { reviewReplyControllerGetReplyCountForReply } from "@/apis/api/reviewReplies";
+import { queryKeys } from "@/lib/query-keys";
 
 export function useReplyCount(replyId: string) {
-  const [replyCount, setReplyCount] = useState<number>(0);
-  const [hasReplies, setHasReplies] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
-
-  const fetchCount = useCallback(async () => {
-    setIsLoading(true);
-    try {
+  const { data, isLoading, refetch } = useQuery({
+    queryKey: queryKeys.replies.count(replyId),
+    queryFn: async () => {
       const response = await reviewReplyControllerGetReplyCountForReply({
         replyId,
       });
-
       const data = (response as any).data;
-      if (data) {
-        setReplyCount(data.replyCount || 0);
-        setHasReplies(data.hasReplies || false);
-      }
-    } catch (error: any) {
-      console.error("Error fetching reply count:", error);
-      setReplyCount(0);
-      setHasReplies(false);
-    } finally {
-      setIsLoading(false);
-    }
-  }, [replyId]);
-
-  useEffect(() => {
-    fetchCount();
-  }, [fetchCount]);
+      return {
+        replyCount: data?.replyCount || 0,
+        hasReplies: data?.hasReplies || false,
+      };
+    },
+    enabled: !!replyId,
+    staleTime: 30 * 1000,
+  });
 
   return {
-    replyCount,
-    hasReplies,
+    replyCount: data?.replyCount ?? 0,
+    hasReplies: data?.hasReplies ?? false,
     isLoading,
-    refetch: fetchCount,
+    refetch,
   };
 }

@@ -1,7 +1,8 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { streamingControllerGetFileAccess } from "@/apis/api/streaming";
+import { queryKeys } from "@/lib/query-keys";
 
 const HLS_MIME_TYPE = "application/x-mpegURL";
 
@@ -22,45 +23,35 @@ interface AbsContentResult {
   };
 }
 
+function cleanFileUrl(url: string): string {
+  const s3Prefix = process.env.NEXT_PUBLIC_S3_BUCKET_URL || "";
+  if (url.startsWith(s3Prefix)) {
+    return url.replace(s3Prefix, "");
+  }
+  return url;
+}
+
 const useVideoAccess = (s3KeyStream: string) => {
-  const [videoContent, setVideoContent] = useState<VideoInfo | undefined>(
-    undefined,
-  );
+  const cleanedS3Key = cleanFileUrl(s3KeyStream);
+  const s3FileKey = encodeURIComponent(cleanedS3Key);
 
-  const handleGetFileInfo = async () => {
-    const cleanedS3Key = cleanFileUrl(s3KeyStream);
-    console.log("Cleaned S3 Key:", cleanedS3Key);
-    const s3FileKey = encodeURIComponent(cleanedS3Key);
-    const mimeType = HLS_MIME_TYPE;
-
-    try {
+  const { data: videoContent } = useQuery({
+    queryKey: queryKeys.videoAccess.access(s3FileKey),
+    queryFn: async () => {
       const result = await streamingControllerGetFileAccess(
         { s3Key: s3FileKey },
         { withCredentials: true },
       );
 
       const data = result.data.data as AbsContentResult;
-      setVideoContent({
+      return {
         src: data.fileUrl,
-        type: mimeType,
-      });
-    } catch (error) {
-      console.error("Error fetching video access:", error);
-    }
-  };
-
-  // Hàm xử lý cắt chuỗi
-  function cleanFileUrl(url: string): string {
-    const s3Prefix = process.env.NEXT_PUBLIC_S3_BUCKET_URL || "";
-    if (url.startsWith(s3Prefix)) {
-      return url.replace(s3Prefix, "");
-    }
-    return url;
-  }
-
-  useEffect(() => {
-    handleGetFileInfo();
-  }, []);
+        type: HLS_MIME_TYPE,
+      } as VideoInfo;
+    },
+    staleTime: 5 * 60 * 1000, // 5 minutes
+    enabled: !!s3KeyStream,
+  });
 
   return { videoContent };
 };

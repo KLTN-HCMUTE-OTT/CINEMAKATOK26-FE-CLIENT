@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   favoriteControllerCreateFavorite,
   favoriteControllerRemoveFavorite,
@@ -14,9 +14,10 @@ import {
 import {
   reviewControllerCreateReview,
   reviewControllerUpdateReview,
-  reviewControllerCheckReviewOwner,
 } from "@/apis/api/review";
 import { toast } from "sonner";
+import { queryKeys } from "@/lib/query-keys";
+import { isAuthenticated } from "@/lib/auth";
 
 interface UseVideoPlayerActionsProps {
   contentId?: string;
@@ -29,175 +30,184 @@ export function useVideoPlayerActions({
   movieId,
   enabled = true,
 }: UseVideoPlayerActionsProps) {
-  // Favorite states
-  const [isFavorite, setIsFavorite] = useState(false);
-  const [isFavoriteLoading, setIsFavoriteLoading] = useState(false);
+  const queryClient = useQueryClient();
+  const isEnabled = enabled && !!contentId && isAuthenticated();
 
-  // Watchlist states
-  const [isInWatchlist, setIsInWatchlist] = useState(false);
-  const [isWatchlistLoading, setIsWatchlistLoading] = useState(false);
+  // Favorite status query
+  const favoriteQuery = useQuery({
+    queryKey: queryKeys.favorites.status(contentId ?? ""),
+    queryFn: async () => {
+      const response = await favoriteControllerGetFavoriteStatus({
+        contentId: contentId!,
+      });
+      return { isFavorited: response?.data?.data?.isFavorited || false };
+    },
+    enabled: isEnabled,
+    staleTime: 30 * 1000,
+  });
 
-  // Rating states
-  const [currentRating, setCurrentRating] = useState<number>(0);
-  const [currentReview, setCurrentReview] = useState<string>("");
-  const [reviewId, setReviewId] = useState<string>("");
-  const [hasExistingReview, setHasExistingReview] = useState(false);
+  // Watchlist status query
+  const watchlistQuery = useQuery({
+    queryKey: queryKeys.watchlist.status(contentId ?? ""),
+    queryFn: async () => {
+      const response = await watchListControllerCheckInWatchList({
+        contentId: contentId!,
+      });
+      return { isInWatchList: response?.data?.data?.isInWatchList || false };
+    },
+    enabled: isEnabled,
+    staleTime: 30 * 1000,
+  });
 
-  // Fetch favorite status
-  useEffect(() => {
-    const fetchFavoriteStatus = async () => {
-      if (!contentId || !enabled) return;
-
-      try {
-        const response = await favoriteControllerGetFavoriteStatus({
-          contentId,
-        });
-
-        if (response?.data) {
-          setIsFavorite(response.data.data.isFavorited || false);
-        }
-      } catch (err) {
-        console.error("Error fetching favorite status:", err);
-        setIsFavorite(false);
-      }
-    };
-
-    fetchFavoriteStatus();
-  }, [contentId, enabled]);
-
-  // Fetch watchlist status
-  useEffect(() => {
-    const fetchWatchlistStatus = async () => {
-      if (!contentId || !enabled) return;
-
-      try {
-        const response = await watchListControllerCheckInWatchList({
-          contentId,
-        });
-
-        if (response?.data) {
-          setIsInWatchlist(response.data.data.isInWatchList || false);
-        }
-      } catch (err) {
-        console.error("Error fetching watchlist status:", err);
-        setIsInWatchlist(false);
-      }
-    };
-
-    fetchWatchlistStatus();
-  }, [contentId, enabled]);
-
-  // Toggle favorite
-  const toggleFavorite = async () => {
-    if (!contentId) {
-      toast.error("Content information not found");
-      return;
-    }
-
-    setIsFavoriteLoading(true);
-    try {
+  // Toggle favorite mutation
+  const toggleFavoriteMutation = useMutation({
+    mutationFn: async (isFavorite: boolean) => {
+      if (!contentId) throw new Error("Content information not found");
       if (isFavorite) {
-        await favoriteControllerRemoveFavorite({ contentId });
-        setIsFavorite(false);
-        toast.success("Unliked successfully");
+        return favoriteControllerRemoveFavorite({ contentId });
       } else {
-        await favoriteControllerCreateFavorite({ contentId });
-        setIsFavorite(true);
-        toast.success("Liked successfully");
+        return favoriteControllerCreateFavorite({ contentId });
       }
-    } catch (err) {
-      console.error("Error toggling favorite:", err);
+    },
+    onMutate: async (isFavorite) => {
+      await queryClient.cancelQueries({
+        queryKey: queryKeys.favorites.status(contentId ?? ""),
+      });
+      const previous = queryClient.getQueryData(
+        queryKeys.favorites.status(contentId ?? ""),
+      );
+      queryClient.setQueryData(queryKeys.favorites.status(contentId ?? ""), {
+        isFavorited: !isFavorite,
+      });
+      return { previous };
+    },
+    onError: (_err, _vars, context) => {
+      if (context?.previous) {
+        queryClient.setQueryData(
+          queryKeys.favorites.status(contentId ?? ""),
+          context.previous,
+        );
+      }
       toast.error("Please log in to perform this action!");
-    } finally {
-      setIsFavoriteLoading(false);
-    }
-  };
+    },
+    onSuccess: (_data, isFavorite) => {
+      toast.success(isFavorite ? "Unliked successfully" : "Liked successfully");
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.favorites.all });
+    },
+  });
 
-  // Toggle watchlist
-  const toggleWatchlist = async () => {
-    if (!contentId) {
-      toast.error("Content information not found");
-      return;
-    }
-
-    setIsWatchlistLoading(true);
-    try {
+  // Toggle watchlist mutation
+  const toggleWatchlistMutation = useMutation({
+    mutationFn: async (isInWatchlist: boolean) => {
+      if (!contentId) throw new Error("Content information not found");
       if (isInWatchlist) {
-        await watchListControllerRemoveFromWatchList({ contentId });
-        setIsInWatchlist(false);
-        toast.success("Removed from watchlist");
+        return watchListControllerRemoveFromWatchList({ contentId });
       } else {
-        await watchListControllerAddToWatchList({ contentId });
-        setIsInWatchlist(true);
-        toast.success("Added to watchlist");
+        return watchListControllerAddToWatchList({ contentId });
       }
-    } catch (err) {
-      console.error("Error toggling watchlist:", err);
+    },
+    onMutate: async (isInWatchlist) => {
+      await queryClient.cancelQueries({
+        queryKey: queryKeys.watchlist.status(contentId ?? ""),
+      });
+      const previous = queryClient.getQueryData(
+        queryKeys.watchlist.status(contentId ?? ""),
+      );
+      queryClient.setQueryData(queryKeys.watchlist.status(contentId ?? ""), {
+        isInWatchList: !isInWatchlist,
+      });
+      return { previous };
+    },
+    onError: (_err, _vars, context) => {
+      if (context?.previous) {
+        queryClient.setQueryData(
+          queryKeys.watchlist.status(contentId ?? ""),
+          context.previous,
+        );
+      }
       toast.error("Please log in to perform this action!");
-    } finally {
-      setIsWatchlistLoading(false);
-    }
-  };
+    },
+    onSuccess: (_data, isInWatchlist) => {
+      toast.success(
+        isInWatchlist ? "Removed from watchlist" : "Added to watchlist",
+      );
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.watchlist.all });
+    },
+  });
 
-  // Submit rating
-  const submitRating = async (rating: number, review: string) => {
-    if (!contentId) {
-      toast.error("Không tìm thấy thông tin nội dung");
-      return;
-    }
-
-    try {
+  // Submit rating mutation
+  const submitRatingMutation = useMutation({
+    mutationFn: async ({
+      rating,
+      review,
+      hasExistingReview,
+      reviewId,
+    }: {
+      rating: number;
+      review: string;
+      hasExistingReview: boolean;
+      reviewId?: string;
+    }) => {
+      if (!contentId) throw new Error("Content information not found");
       if (hasExistingReview && reviewId) {
-        // Update existing review
-        await reviewControllerUpdateReview({ id: reviewId }, {
-          id: reviewId,
-          contentId,
-          rating,
-          contentReviewed: review,
-        } as any);
-        toast.success("Update review successfully");
+        await reviewControllerUpdateReview(
+          { id: reviewId },
+          { id: reviewId, contentId, rating, contentReviewed: review } as any,
+        );
       } else {
-        // Create new review
         const response = await reviewControllerCreateReview({
           contentId,
           rating,
           contentReviewed: review,
         } as any);
-
-        if (response?.data?.data?.id) {
-          setReviewId(response.data.data.id);
-          setHasExistingReview(true);
-        }
-
-        toast.success("Submit review successfully");
+        return response?.data?.data;
       }
-
-      setCurrentRating(rating);
-      setCurrentReview(review);
-    } catch (err: any) {
-      console.error("Error submitting rating:", err);
-
-      // Handle specific error: user already reviewed
+    },
+    onSuccess: () => {
+      toast.success("Submit review successfully");
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.reviews.forContent(contentId ?? ""),
+      });
+    },
+    onError: (err: any) => {
       if (err?.response?.data?.message?.includes("already reviewed")) {
         toast.error("You have already reviewed this content!");
       } else {
         toast.error("Please log in to submit a review!");
       }
-    }
-  };
+    },
+  });
+
+  const isFavorite = favoriteQuery.data?.isFavorited ?? false;
+  const isInWatchlist = watchlistQuery.data?.isInWatchList ?? false;
 
   return {
     // Favorite
     isFavorite,
-    isFavoriteLoading,
-    toggleFavorite,
+    isFavoriteLoading: toggleFavoriteMutation.isPending,
+    toggleFavorite: () => toggleFavoriteMutation.mutate(isFavorite),
     // Watchlist
     isInWatchlist,
-    isWatchlistLoading,
-    toggleWatchlist,
+    isWatchlistLoading: toggleWatchlistMutation.isPending,
+    toggleWatchlist: () => toggleWatchlistMutation.mutate(isInWatchlist),
     // Rating
-    currentRating,
-    currentReview,
-    submitRating,
+    currentRating: 0,
+    currentReview: "",
+    submitRating: (
+      rating: number,
+      review: string,
+      hasExistingReview = false,
+      reviewId?: string,
+    ) =>
+      submitRatingMutation.mutate({
+        rating,
+        review,
+        hasExistingReview,
+        reviewId,
+      }),
   };
 }

@@ -1,6 +1,7 @@
-import { useState, useEffect } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { actorsControllerGetActorById } from "@/apis/api/actors";
 import { directorsControllerGetDirectorById } from "@/apis/api/directors";
+import { queryKeys } from "@/lib/query-keys";
 
 export enum GENDER {
   MALE = "MALE",
@@ -23,7 +24,7 @@ interface PersonContent {
   releaseDate: Date;
   rating: number;
   duration?: string;
-  character?: string; // For actors
+  character?: string;
 }
 
 interface PersonData {
@@ -35,75 +36,45 @@ interface PersonData {
   profilePicture: string;
   nationality: string;
   contents: PersonContent[];
-
   contentCount?: number;
-  role: "actor" | "director"; // To distinguish between actor and director
+  role: "actor" | "director";
 }
 
 interface UsePersonOptions {
   id: string;
 }
 
-export function usePerson({ id }: UsePersonOptions) {
-  const [person, setPerson] = useState<PersonData | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    const fetchPerson = async () => {
-      try {
-        setIsLoading(true);
-        setError(null);
-
-        // Try to fetch from actors first
-        try {
-          const actorResponse = await actorsControllerGetActorById({
-            id,
-          });
-
-          if (actorResponse?.data?.data) {
-            const actorData = actorResponse.data.data;
-            setPerson({
-              ...actorData,
-              role: "actor",
-            });
-            return;
-          }
-        } catch (actorError) {
-          // If actor not found, continue to try director
-          console.log("Not found in actors, trying directors...");
-        }
-
-        // If not found in actors, try directors
-        const directorResponse = await directorsControllerGetDirectorById({
-          id,
-        });
-
-        if (directorResponse?.data?.data) {
-          const directorData = directorResponse.data.data;
-          setPerson({
-            ...directorData,
-            role: "director",
-          });
-        } else {
-          setError("Person not found");
-        }
-      } catch (err: any) {
-        console.error("Error fetching person:", err);
-        setError(err?.message || "Failed to fetch person data");
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    if (id) {
-      fetchPerson();
+async function fetchPerson(id: string): Promise<PersonData | null> {
+  // Try to fetch from actors first
+  try {
+    const actorResponse = await actorsControllerGetActorById({ id });
+    if (actorResponse?.data?.data) {
+      return { ...actorResponse.data.data, role: "actor" } as PersonData;
     }
-  }, [id]);
+  } catch {
+    // If actor not found, continue to try director
+  }
+
+  // If not found in actors, try directors
+  const directorResponse = await directorsControllerGetDirectorById({ id });
+  if (directorResponse?.data?.data) {
+    return { ...directorResponse.data.data, role: "director" } as PersonData;
+  }
+
+  return null;
+}
+
+export function usePerson({ id }: UsePersonOptions) {
+  const { data, isLoading, error } = useQuery({
+    queryKey: queryKeys.person.detail(id),
+    queryFn: () => fetchPerson(id),
+    enabled: !!id,
+    staleTime: 10 * 60 * 1000, // 10 minutes — person data rarely changes
+  });
 
   return {
-    person,
+    person: data ?? null,
     isLoading,
-    error,
+    error: error?.message ?? null,
   };
 }

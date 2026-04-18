@@ -1,26 +1,26 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
-import React, { createContext, useContext, useState, useEffect } from "react";
+import React, { createContext, useContext } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import {
-  favoriteControllerCreateFavorite,
-  favoriteControllerRemoveFavorite,
-  favoriteControllerGetFavoriteStatus,
-} from "@/apis/api/favorites";
+  useFavoriteStatusQuery,
+  useToggleFavoriteMutation,
+} from "@/hooks/use-favorites";
 import {
-  watchListControllerAddToWatchList,
-  watchListControllerRemoveFromWatchList,
-  watchListControllerCheckInWatchList,
-} from "@/apis/api/watchList";
+  useWatchlistStatusQuery,
+  useToggleWatchlistMutation,
+} from "@/hooks/use-watchlist";
 import {
-  reviewControllerGetReviewForContent,
-  reviewControllerCreateReview,
-  reviewControllerUpdateReview,
-  reviewControllerDeleteReview,
-} from "@/apis/api/review";
+  useReviewsQuery,
+  useSubmitReviewMutation,
+  useUpdateReviewMutation,
+  useDeleteReviewMutation,
+} from "@/hooks/use-reviews-management";
 import { toast } from "sonner";
 import { useUIStore } from "@/store";
 import { isAuthenticated } from "@/lib/auth";
+import { queryKeys } from "@/lib/query-keys";
 
 interface ActionsContextType {
   // Favorite
@@ -62,358 +62,131 @@ interface ActionsProviderProps {
 
 export function ActionsProvider({ children, contentId }: ActionsProviderProps) {
   const openLoginModal = useUIStore((s) => s.openLoginModal);
-  // Favorite states
-  const [isFavorite, setIsFavorite] = useState(false);
-  const [totalFavorites, setTotalFavorites] = useState(0);
-  const [isFavoriteLoading, setIsFavoriteLoading] = useState(false);
+  const queryClient = useQueryClient();
 
-  // Watchlist states
-  const [isInWatchlist, setIsInWatchlist] = useState(false);
-  const [isWatchlistLoading, setIsWatchlistLoading] = useState(false);
+  // Favorite — TanStack Query
+  const favoriteQuery = useFavoriteStatusQuery(contentId);
+  const favoriteMutation = useToggleFavoriteMutation(contentId);
+  const isFavorite = favoriteQuery.data?.isFavorited ?? false;
+  const totalFavorites = favoriteQuery.data?.totalFavorites ?? 0;
 
-  // Review states
-  const [userReview, setUserReview] = useState<API.ReviewDto | null>(null);
-  const [allReviews, setAllReviews] = useState<API.ReviewDto[]>([]);
-  const [reviewsLoading, setReviewsLoading] = useState(false);
-  const [currentPage, setCurrentPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
-  const [totalReviews, setTotalReviews] = useState(0);
-  const REVIEWS_PER_PAGE = 10;
+  // Watchlist — TanStack Query
+  const watchlistQuery = useWatchlistStatusQuery(contentId);
+  const watchlistMutation = useToggleWatchlistMutation(contentId);
+  const isInWatchlist = watchlistQuery.data?.isInWatchList ?? false;
 
-  // Check if user is logged in
-  const isLoggedIn = () => {
-    return isAuthenticated();
-  };
+  // Reviews — TanStack Query
+  const reviewsQuery = useReviewsQuery(contentId, 1);
+  const submitMutation = useSubmitReviewMutation(contentId);
+  const updateMutation = useUpdateReviewMutation(contentId);
+  const deleteMutation = useDeleteReviewMutation(contentId);
 
-  // Fetch favorite status
-  const refetchFavoriteStatus = async () => {
-    if (!contentId) return;
+  // Find user's review
+  const allReviews = reviewsQuery.data?.reviews ?? [];
+  let userReview: API.ReviewDto | null = null;
+  if (isAuthenticated()) {
+    const userName = JSON.parse(
+      localStorage.getItem("user") || "{}",
+    )?.name;
+    const myReview = allReviews.find(
+      (r: API.ReviewDto) => r.name === userName,
+    );
+    if (myReview) userReview = myReview;
+  }
 
-    // Skip if not logged in (silent fail, no error)
-    if (!isLoggedIn()) {
-      setIsFavorite(false);
-      setTotalFavorites(0);
-      return;
-    }
-
-    try {
-      const response = await favoriteControllerGetFavoriteStatus({
-        contentId,
-      });
-
-      if (response?.data) {
-        setIsFavorite(response.data.data.isFavorited || false);
-        setTotalFavorites(response.data.data.totalFavorites || 0);
-      }
-    } catch (err: any) {
-      // Silent fail - don't show error to user
-      // Only log if it's not an auth error
-      if (err?.response?.status !== 401 && err?.response?.status !== 403) {
-        console.error("Error fetching favorite status:", err);
-      }
-      setIsFavorite(false);
-      setTotalFavorites(0);
-    }
-  };
-
-  // Fetch watchlist status
-  const refetchWatchlistStatus = async () => {
-    if (!contentId) return;
-
-    // Skip if not logged in (silent fail, no error)
-    if (!isLoggedIn()) {
-      setIsInWatchlist(false);
-      return;
-    }
-
-    try {
-      const response = await watchListControllerCheckInWatchList({
-        contentId,
-      });
-
-      if (response?.data) {
-        setIsInWatchlist(response.data.data.isInWatchList || false);
-      }
-    } catch (err: any) {
-      // Silent fail - don't show error to user
-      // Only log if it's not an auth error
-      if (err?.response?.status !== 401 && err?.response?.status !== 403) {
-        console.error("Error fetching watchlist status:", err);
-      }
-      setIsInWatchlist(false);
-    }
-  };
-
-  // Initial fetch
-  useEffect(() => {
-    if (contentId) {
-      refetchFavoriteStatus();
-      refetchWatchlistStatus();
-      refetchReviews();
-    }
-  }, [contentId]);
-
-  // Fetch reviews for content with pagination
-  const fetchReviewsForPage = async (page: number) => {
-    if (!contentId) return;
-
-    setReviewsLoading(true);
-    try {
-      const response = await reviewControllerGetReviewForContent({
-        contentId,
-        page,
-        limit: REVIEWS_PER_PAGE,
-      });
-
-      if (response?.data) {
-        const reviews = response.data.data || [];
-        const meta = response.data.meta;
-
-        if (page === 1) {
-          // Replace all reviews for first page
-          setAllReviews(reviews);
-        } else {
-          // Append reviews for load more
-          setAllReviews((prev) => [...prev, ...reviews]);
-        }
-
-        // Update pagination info
-        if (meta) {
-          setCurrentPage(meta.currentPage || page);
-          setTotalPages(meta.totalPages || 1);
-          setTotalReviews(meta.totalItems || reviews.length);
-        }
-
-        // Find user's review if logged in
-        if (isLoggedIn()) {
-          const userName = JSON.parse(
-            localStorage.getItem("user") || "{}",
-          )?.name;
-          const myReview = reviews.find(
-            (r: API.ReviewDto) => r.name === userName,
-          );
-          if (myReview) {
-            setUserReview(myReview);
-          } else if (page === 1) {
-            // Only clear if on first page
-            setUserReview(null);
-          }
-        } else {
-          setUserReview(null);
-        }
-      }
-    } catch (err: any) {
-      // Silent fail for reviews
-      if (err?.response?.status !== 401 && err?.response?.status !== 403) {
-        console.error("Error fetching reviews:", err);
-      }
-      if (page === 1) {
-        setAllReviews([]);
-        setUserReview(null);
-      }
-    } finally {
-      setReviewsLoading(false);
-    }
-  };
-
-  // Refetch reviews (reset to page 1)
-  const refetchReviews = async () => {
-    setCurrentPage(1);
-    await fetchReviewsForPage(1);
-  };
-
-  // Load more reviews (next page)
-  const loadMoreReviews = async () => {
-    if (currentPage < totalPages) {
-      await fetchReviewsForPage(currentPage + 1);
-    }
-  };
-
-  // Go to specific page
-  const goToPage = async (page: number) => {
-    if (page >= 1 && page <= totalPages && page !== currentPage) {
-      setCurrentPage(page);
-      await fetchReviewsForPage(page);
-    }
-  };
-
-  // Calculate hasMore
-  const hasMore = currentPage < totalPages;
-
-  // Submit or update review
-  const submitReview = async (rating: number, review: string) => {
-    if (!isLoggedIn()) {
-      openLoginModal();
-      toast.error("Vui lòng đăng nhập để đánh giá!");
-      return;
-    }
-
-    if (!contentId) {
-      toast.error("Không tìm thấy thông tin nội dung");
-      return;
-    }
-
-    try {
-      if (userReview) {
-        // Update existing review
-        await reviewControllerUpdateReview({ id: userReview.id }, {
-          id: userReview.id,
-          contentId,
-          rating,
-          contentReviewed: review,
-        } as any);
-        toast.success("Đã cập nhật đánh giá");
-      } else {
-        // Create new review
-        await reviewControllerCreateReview({
-          contentId,
-          rating,
-          contentReviewed: review,
-        } as any);
-        toast.success("Đã gửi đánh giá thành công");
-      }
-
-      // Refetch reviews to update list
-      await refetchReviews();
-    } catch (err: any) {
-      console.error("Error submitting review:", err);
-
-      if (err?.response?.status === 401 || err?.response?.status === 403) {
-        openLoginModal();
-        toast.error("Vui lòng đăng nhập để đánh giá!");
-      } else if (err?.response?.data?.message?.includes("already reviewed")) {
-        toast.error("Bạn đã đánh giá nội dung này rồi!");
-      } else {
-        toast.error("Có lỗi xảy ra. Vui lòng thử lại!");
-      }
-      throw err; // Re-throw to handle in component
-    }
-  };
-
-  // Delete review
-  const deleteReview = async (reviewId: string) => {
-    if (!isLoggedIn()) {
-      openLoginModal();
-      return;
-    }
-
-    try {
-      await reviewControllerDeleteReview({ id: reviewId });
-      toast.success("Đã xóa đánh giá");
-
-      // Refetch reviews to update list
-      await refetchReviews();
-    } catch (err: any) {
-      console.error("Error deleting review:", err);
-
-      if (err?.response?.status === 401 || err?.response?.status === 403) {
-        openLoginModal();
-      } else {
-        toast.error("Có lỗi xảy ra. Vui lòng thử lại!");
-      }
-    }
-  };
-
-  // Toggle favorite
   const toggleFavorite = async () => {
-    // Check login first
-    if (!isLoggedIn()) {
+    if (!isAuthenticated()) {
       openLoginModal();
       return;
     }
-
     if (!contentId) {
       toast.error("Không tìm thấy thông tin nội dung");
       return;
     }
-
-    setIsFavoriteLoading(true);
-    try {
-      if (isFavorite) {
-        await favoriteControllerRemoveFavorite({ contentId });
-        setIsFavorite(false);
-        setTotalFavorites((prev) => Math.max(0, prev - 1));
-        toast.success("Đã bỏ thích");
-      } else {
-        await favoriteControllerCreateFavorite({ contentId });
-        setIsFavorite(true);
-        setTotalFavorites((prev) => prev + 1);
-        toast.success("Đã thêm vào yêu thích");
-      }
-    } catch (err: any) {
-      console.error("Error toggling favorite:", err);
-      // Better error message based on error type
-      if (err?.response?.status === 401 || err?.response?.status === 403) {
-        openLoginModal();
-      } else {
-        toast.error("Có lỗi xảy ra. Vui lòng thử lại!");
-      }
-    } finally {
-      setIsFavoriteLoading(false);
-    }
+    await favoriteMutation.mutateAsync(isFavorite ? "remove" : "add");
   };
 
-  // Toggle watchlist
   const toggleWatchlist = async () => {
-    // Check login first
-    if (!isLoggedIn()) {
+    if (!isAuthenticated()) {
       openLoginModal();
       return;
     }
-
     if (!contentId) {
       toast.error("Không tìm thấy thông tin phim");
       return;
     }
+    await watchlistMutation.mutateAsync(isInWatchlist ? "remove" : "add");
+  };
 
-    setIsWatchlistLoading(true);
-    try {
-      if (isInWatchlist) {
-        await watchListControllerRemoveFromWatchList({ contentId });
-        setIsInWatchlist(false);
-        toast.success("Đã xóa khỏi danh sách");
-      } else {
-        await watchListControllerAddToWatchList({ contentId });
-        setIsInWatchlist(true);
-        toast.success("Đã thêm vào danh sách");
-      }
-    } catch (err: any) {
-      console.error("Error toggling watchlist:", err);
-      // Better error message based on error type
-      if (err?.response?.status === 401 || err?.response?.status === 403) {
-        openLoginModal();
-      } else {
-        toast.error("Có lỗi xảy ra. Vui lòng thử lại!");
-      }
-    } finally {
-      setIsWatchlistLoading(false);
+  const submitReview = async (rating: number, review: string) => {
+    if (!isAuthenticated()) {
+      openLoginModal();
+      toast.error("Vui lòng đăng nhập để đánh giá!");
+      return;
+    }
+    if (userReview) {
+      await updateMutation.mutateAsync({
+        reviewId: userReview.id,
+        rating,
+        contentReviewed: review,
+      });
+    } else {
+      await submitMutation.mutateAsync({ rating, contentReviewed: review });
     }
   };
+
+  const deleteReview = async (reviewId: string) => {
+    if (!isAuthenticated()) {
+      openLoginModal();
+      return;
+    }
+    await deleteMutation.mutateAsync(reviewId);
+  };
+
+  const totalReviews = reviewsQuery.data?.totalReviews ?? 0;
+  const hasMore = reviewsQuery.data?.hasMore ?? false;
+  const meta = reviewsQuery.data?.meta;
+  const currentPage = meta?.currentPage ?? 1;
+  const totalPages = meta?.totalPages ?? 1;
 
   return (
     <ActionsContext.Provider
       value={{
         isFavorite,
         totalFavorites,
-        isFavoriteLoading,
+        isFavoriteLoading: favoriteMutation.isPending,
         toggleFavorite,
         isInWatchlist,
-        isWatchlistLoading,
+        isWatchlistLoading: watchlistMutation.isPending,
         toggleWatchlist,
         userReview,
         allReviews,
-        reviewsLoading,
+        reviewsLoading: reviewsQuery.isLoading,
         currentPage,
         totalPages,
         totalReviews,
         hasMore,
         submitReview,
         deleteReview,
-        refetchReviews,
-        loadMoreReviews,
-        goToPage,
-        refetchFavoriteStatus,
-        refetchWatchlistStatus,
+        refetchReviews: async () => {
+          await reviewsQuery.refetch();
+        },
+        loadMoreReviews: async () => {
+          await queryClient.invalidateQueries({
+            queryKey: queryKeys.reviews.forContent(contentId),
+          });
+        },
+        goToPage: async (_page: number) => {
+          await queryClient.invalidateQueries({
+            queryKey: queryKeys.reviews.forContent(contentId),
+          });
+        },
+        refetchFavoriteStatus: async () => {
+          await favoriteQuery.refetch();
+        },
+        refetchWatchlistStatus: async () => {
+          await watchlistQuery.refetch();
+        },
       }}
     >
       {children}
