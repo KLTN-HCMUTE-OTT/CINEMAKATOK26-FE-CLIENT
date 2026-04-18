@@ -40,3 +40,7 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 swagger.json
+
+# ai agent
+.agent/
+.gemini/
