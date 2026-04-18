@@ -104,7 +104,7 @@ export default function BlogDetailPage() {
               </div>
               <div className="flex items-center gap-2">
                 <User size={18} />
-                <span>{news.name || "Anonymous"}</span>
+                <span>{news.author_name || "Anonymous"}</span>
               </div>
             </div>
 
@@ -138,11 +138,11 @@ export default function BlogDetailPage() {
                   <div className="relative w-24 h-24 md:w-32 md:h-32 rounded-full overflow-hidden flex-shrink-0 ring-4 ring-white/20">
                     <Image
                       src={
-                        typeof news.avatar === "string"
-                          ? news.avatar
-                          : news.avatar?.src ?? "/default-avatar.jpg"
+                        typeof news.author_avatar === "string"
+                          ? news.author_avatar
+                          : news.author_avatar?.src ?? "/default-avatar.jpg"
                       }
-                      alt={news.name || "Author"}
+                      alt={news.author_name || "Author"}
                       fill
                       className="object-cover"
                     />
@@ -155,7 +155,7 @@ export default function BlogDetailPage() {
                         Author
                       </p>
                       <h3 className="text-2xl md:text-3xl font-bold text-white">
-                        {news.name || "Anonymous"}
+                        {news.author_name || "Anonymous"}
                       </h3>
                     </div>
                   </div>

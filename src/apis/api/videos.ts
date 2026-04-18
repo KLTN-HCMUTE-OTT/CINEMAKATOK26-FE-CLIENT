@@ -22,7 +22,7 @@ export async function videosControllerCreateVideo(
   body: API.CreateVideoDto,
   options?: { [key: string]: any }
 ) {
-  return request<API.VideoDto>("/api/v1/videos", {
+  return request<API.VideoDtoResponseDto>("/api/v1/videos", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -39,7 +39,7 @@ export async function videosControllerGetVideoById(
   options?: { [key: string]: any }
 ) {
   const { id: param0, ...queryParams } = params;
-  return request<API.VideoDto>(`/api/v1/videos/${param0}`, {
+  return request<API.VideoDtoResponseDto>(`/api/v1/videos/${param0}`, {
     method: "GET",
     params: { ...queryParams },
     ...(options || {}),
@@ -54,7 +54,7 @@ export async function videosControllerUpdateVideo(
   options?: { [key: string]: any }
 ) {
   const { id: param0, ...queryParams } = params;
-  return request<API.VideoDto>(`/api/v1/videos/${param0}`, {
+  return request<API.VideoDtoResponseDto>(`/api/v1/videos/${param0}`, {
     method: "PUT",
     headers: {
       "Content-Type": "application/json",

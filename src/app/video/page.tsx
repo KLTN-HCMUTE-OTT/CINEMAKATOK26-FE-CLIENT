@@ -6,7 +6,7 @@ import useVideoAccess from "@/hooks/use-video-access";
 import { ProtectedRoute } from "@/components/protected-route";
 import { useSearchParams } from "next/navigation";
 import { useEffect, useState, Suspense } from "react";
-import { videoControllerFindOne } from "@/apis/api/video";
+import { videosControllerGetVideoById } from "@/apis/api/videos";
 
 function VideoContent() {
   const searchParams = useSearchParams();
@@ -16,7 +16,7 @@ function VideoContent() {
 
   useEffect(() => {
     if (videoId) {
-      videoControllerFindOne({ id: videoId })
+      videosControllerGetVideoById({ id: videoId })
         .then((res) => {
           setVideoDetails(res.data.data);
         })

@@ -192,6 +192,12 @@ declare namespace API {
     durationDays: number;
   };
 
+  type BooleanResponseDto = {
+    statusCode: number;
+    message: string;
+    data: boolean;
+  };
+
   type CategoriesControllerDeleteCategoryParams = {
     /** Category ID */
     id: string;
@@ -377,6 +383,10 @@ declare namespace API {
     page?: number;
     /** Number of items per page */
     limit?: number;
+  };
+
+  type ContentsControllerIncreaseViewCountParams = {
+    id: string;
   };
 
   type ContentsControllerUpdateContentParams = {
@@ -1534,6 +1544,12 @@ declare namespace API {
     seasons: SeasonDto[];
   };
 
+  type TVSeriesDtoResponseDto = {
+    statusCode: number;
+    message: string;
+    data: TVSeriesDto;
+  };
+
   type TVSeriesSummaryDto = {
     /** Unique identifier of the entity */
     id: string;
@@ -1967,6 +1983,12 @@ declare namespace API {
     message: string;
     data: VideoDto[];
     meta: PaginationMeta;
+  };
+
+  type VideoDtoResponseDto = {
+    statusCode: number;
+    message: string;
+    data: VideoDto;
   };
 
   type VideosControllerDeleteVideoParams = {

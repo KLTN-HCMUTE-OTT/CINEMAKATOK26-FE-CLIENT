@@ -7,7 +7,7 @@ import { MovieInfoSection } from "@/components/movie/movie-info-section";
 import { RecommendedMoviesSection } from "@/components/movie/recommended-movies-section";
 import { ReviewsSection } from "@/components/movie/reviews-section";
 import { moviesControllerGetMovieById } from "@/apis/api/movies";
-// import { contentsControllerIncreaseView } from "@/apis/api/contents";
+import { contentsControllerIncreaseViewCount } from "@/apis/api/contents";
 import { ActionsProvider, useActions } from "@/contexts/movie-actions-context";
 import Image from "next/image";
 import { Loader2 } from "lucide-react";
@@ -89,9 +89,9 @@ function MoviePageContent({ movieId }: { movieId: string | undefined }) {
       if (!metaData?.id) return;
 
       try {
-        // await contentControllerIncreaseView({
-        //   id: metaData.id,
-        // });
+        await contentsControllerIncreaseViewCount({
+          id: metaData.id,
+        });
         // Tăng view count locally sau khi API thành công
         setViewCount((prev) => prev + 1);
         console.log("View count increased for content:", metaData.id);

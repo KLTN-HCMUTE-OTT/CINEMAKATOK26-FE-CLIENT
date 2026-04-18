@@ -25,7 +25,7 @@ export async function tvSeriesControllerCreateTvSeries(
   body: API.CreateTVSeriesDto,
   options?: { [key: string]: any }
 ) {
-  return request<API.TVSeriesDto>("/api/v1/tv-series", {
+  return request<API.TVSeriesDtoResponseDto>("/api/v1/tv-series", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -42,7 +42,7 @@ export async function tvSeriesControllerGetTvSeriesById(
   options?: { [key: string]: any }
 ) {
   const { id: param0, ...queryParams } = params;
-  return request<API.TVSeriesDto>(`/api/v1/tv-series/${param0}`, {
+  return request<API.TVSeriesDtoResponseDto>(`/api/v1/tv-series/${param0}`, {
     method: "GET",
     params: { ...queryParams },
     ...(options || {}),
@@ -57,7 +57,7 @@ export async function tvSeriesControllerUpdateTvSeries(
   options?: { [key: string]: any }
 ) {
   const { id: param0, ...queryParams } = params;
-  return request<API.TVSeriesDto>(`/api/v1/tv-series/${param0}`, {
+  return request<API.TVSeriesDtoResponseDto>(`/api/v1/tv-series/${param0}`, {
     method: "PUT",
     headers: {
       "Content-Type": "application/json",

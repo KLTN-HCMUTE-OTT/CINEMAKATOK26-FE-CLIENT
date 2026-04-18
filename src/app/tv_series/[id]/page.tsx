@@ -2,13 +2,12 @@
 
 import { Footer } from "@/components/footer";
 import { Header } from "@/components/header";
-import { contentControllerIncreaseView } from "@/apis/api/content";
+import { contentsControllerIncreaseViewCount } from "@/apis/api/contents";
 import { ActionsProvider, useActions } from "@/contexts/movie-actions-context";
-import Image from "next/image";
 import { Loader2 } from "lucide-react";
 import { use, useEffect, useState } from "react";
 import { LoadingErrorWrapper } from "@/components/loading-error-wrapper";
-import { tvSeriesControllerFindOne } from "@/apis/api/tvSeries";
+import { tvSeriesControllerGetTvSeriesById } from "@/apis/api/tvSeries";
 import TvSeriesBanner from "@/components/tv_serie/card/tv-series-banner";
 import { MoreTVSeriesSection } from "@/components/tv_serie/section/more-tv-series-section";
 import TVSeriesTabsContainer from "@/components/tv_serie/tv-series-container";
@@ -53,7 +52,7 @@ function TVSeriesPageContent({
       setError(null);
 
       try {
-        const response = await tvSeriesControllerFindOne({ id: tvSeriesId });
+        const response = await tvSeriesControllerGetTvSeriesById({ id: tvSeriesId });
 
         if (response?.data) {
           setTVSeriesData(response.data);
@@ -85,7 +84,7 @@ function TVSeriesPageContent({
       if (!metaData?.id) return;
 
       try {
-        await contentControllerIncreaseView({
+        await contentsControllerIncreaseViewCount({
           id: metaData.id,
         });
         // Tăng view count locally sau khi API thành công
