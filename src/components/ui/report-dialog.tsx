@@ -12,7 +12,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { reportControllerCreateReport } from "@/apis/api/reports";
+import { reportControllerCreate } from "@/apis/api/reports";
 import { toast } from "sonner";
 
 interface ReportDialogProps {
@@ -73,7 +73,7 @@ export function ReportDialog({
 
     try {
       setIsSubmitting(true);
-      await reportControllerCreateReport({
+      await reportControllerCreate({
         type,
         targetId: reviewId,
         reason: selectedReason as
