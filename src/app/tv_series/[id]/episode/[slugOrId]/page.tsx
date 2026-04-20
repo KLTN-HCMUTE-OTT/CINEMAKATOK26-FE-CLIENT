@@ -3,7 +3,7 @@ import { ActionsProvider } from "@/contexts/movie-actions-context";
 import TVSeriesVideoContent from "@/components/tv_serie/tv-series-content";
 import { useTvSeriesDetail } from "@/hooks/use-tvseries";
 import { Loader2 } from "lucide-react";
-import { useEffect, useState, useMemo, use } from "react";
+import { useMemo, use } from "react";
 
 // export const metadata = {
 //   title: "TV Series | My App",
@@ -32,7 +32,7 @@ export default function TVSeriesVideoPage({ params }: Props) {
 
       if (
         possibleUUID.match(
-          /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+          /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i,
         )
       ) {
         return possibleUUID;
@@ -49,7 +49,7 @@ export default function TVSeriesVideoPage({ params }: Props) {
       const possibleUUID = parts.slice(-5).join("-");
       if (
         possibleUUID.match(
-          /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+          /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i,
         )
       ) {
         return possibleUUID;
@@ -58,18 +58,11 @@ export default function TVSeriesVideoPage({ params }: Props) {
     return episodeSlugOrId;
   }, [episodeSlugOrId]);
 
-  // Get contentId from initial fetch (we need this for the Provider)
-  const [initialContentId, setInitialContentId] = useState<string>("");
-
   const { result, isLoading, error } = useTvSeriesDetail(tvSeriesId);
-  useEffect(() => {
-    if (result && result.metaData && !initialContentId) {
-      setInitialContentId(result.metaData.id);
-    }
-  }, [result, initialContentId]);
+  const resolvedContentId = result?.metaData?.id || result?.id || "";
 
-  // Don't render until we have contentId
-  if (!initialContentId) {
+  // Keep spinner only while detail request is in-flight
+  if (isLoading && !resolvedContentId) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-gray-900 via-slate-900 to-black flex items-center justify-center">
         <Loader2 className="w-8 h-8 animate-spin text-purple-500" />
@@ -77,8 +70,24 @@ export default function TVSeriesVideoPage({ params }: Props) {
     );
   }
 
+  if (error) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-gray-900 via-slate-900 to-black flex items-center justify-center px-4 text-center text-red-300">
+        Không thể tải thông tin tập phim. Vui lòng thử lại sau.
+      </div>
+    );
+  }
+
+  if (!tvSeriesId || !result || !resolvedContentId) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-gray-900 via-slate-900 to-black flex items-center justify-center px-4 text-center text-gray-200">
+        Không tìm thấy dữ liệu TV Series.
+      </div>
+    );
+  }
+
   return (
-    <ActionsProvider contentId={initialContentId}>
+    <ActionsProvider contentId={resolvedContentId}>
       <TVSeriesVideoContent tvSeries={result} episodeId={episodeId} />
     </ActionsProvider>
   );

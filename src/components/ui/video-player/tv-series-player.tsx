@@ -11,6 +11,7 @@ export interface TVSeriesVideoPlayerProps {
   onEnded?: () => void;
   movieId?: string;
   videoId?: string; // New prop for video ID
+  episodeId?: string | null;
   initialTime?: number;
   sprites?: string[];
   vttFiles?: string[];
@@ -30,6 +31,7 @@ export const TVSeriesVideoPlayerComponent = ({
   onEnded,
   movieId,
   videoId,
+  episodeId,
   initialTime,
   sprites,
   vttFiles,
@@ -49,6 +51,8 @@ export const TVSeriesVideoPlayerComponent = ({
         onEnded={onEnded}
         movieId={movieId}
         videoId={videoId}
+        episodeId={episodeId}
+        contentType="tv_series"
         initialTime={initialTime}
         sprites={sprites}
         vttFiles={vttFiles}

@@ -1,6 +1,6 @@
 "use client";
 
-import { tvSeriesControllerGetRecommendations } from "@/apis/api/tvSeries";
+import { tvSeriesControllerGetRelatedTvSeries } from "@/apis/api/tvSeries";
 import { useEffect, useState } from "react";
 import { CustomCarousel } from "@/components/custom-carousel";
 import { TVSeriesCard } from "./tv-series-list";
@@ -12,7 +12,7 @@ export function MoreTVSeriesSection({ tvSeriesId }: MoreTVSeriesSectionProps) {
   useEffect(() => {
     const fetchMoreTVSeries = async () => {
       try {
-        const response = await tvSeriesControllerGetRecommendations({
+        const response = await tvSeriesControllerGetRelatedTvSeries({
           id: tvSeriesId,
           page: 1,
           limit: 10,

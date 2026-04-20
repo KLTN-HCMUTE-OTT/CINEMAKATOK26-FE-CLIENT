@@ -40,6 +40,7 @@ const MovieVideoPlayerComponent = ({
         onEnded={onEnded}
         movieId={movieId}
         videoId={videoId}
+        contentType="movie"
         initialTime={initialTime}
         sprites={sprites}
         vttFiles={vttFiles}

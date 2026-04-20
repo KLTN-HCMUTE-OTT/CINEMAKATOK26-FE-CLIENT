@@ -22,6 +22,8 @@ interface VideoPlayerProps {
   // Content IDs for API integration
   videoId?: string; // New preferred parameter
   movieId?: string;
+  episodeId?: string | null;
+  contentType?: "movie" | "tv_series" | null;
   initialTime?: number;
   sprites?: string[];
   vttFiles?: string[];
@@ -41,6 +43,8 @@ export function CustomVideoPlayer({
   onEnded,
   videoId,
   movieId,
+  episodeId,
+  contentType = "movie",
   initialTime,
   sprites,
   vttFiles,
@@ -107,6 +111,8 @@ export function CustomVideoPlayer({
     onTimeUpdate,
     onEnded,
     videoId,
+    episodeId,
+    contentType,
     initialTime,
     // pass through series props if available
     episodeIndex: episodeIndexProp,
