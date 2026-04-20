@@ -7,6 +7,7 @@ import Hls from "hls.js";
 import { useWatchProgress } from "@/hooks/use-watch-progress";
 import { useAuth } from "@/hooks/use-auth";
 import { auditLogControllerCreateLog } from "@/apis/api/auditLogs";
+import { useVideoStore } from "@/store";
 
 interface UseVideoPlayerProps {
   src: string;
@@ -15,6 +16,8 @@ interface UseVideoPlayerProps {
   onTimeUpdate?: (currentTime: number) => void;
   onEnded?: () => void;
   videoId?: string; // New preferred parameter
+  episodeId?: string | null;
+  contentType?: "movie" | "tv_series" | null;
   initialTime?: number;
   // add for tv series if needed
   episodeIndex?: number;
@@ -30,6 +33,8 @@ export function useVideoPlayer({
   onTimeUpdate,
   onEnded,
   videoId,
+  episodeId,
+  contentType = "movie",
   initialTime,
   episodeIndex,
   totalEpisodes,
@@ -46,13 +51,10 @@ export function useVideoPlayer({
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
-  const [volume, setVolume] = useState(1);
-  const [isMuted, setIsMuted] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [showControls, setShowControls] = useState(true);
   const [buffered, setBuffered] = useState(0);
   const [playbackRate, setPlaybackRate] = useState(1);
-  const [quality, setQuality] = useState("Auto");
   const [availableQualities, setAvailableQualities] = useState<
     Array<{ label: string; height: number; index: number }>
   >([]);
@@ -71,14 +73,49 @@ export function useVideoPlayer({
   const wasPlayingBeforeDragRef = useRef(false);
   const [error, setError] = useState<string | null>(null);
   const [retryCount, setRetryCount] = useState(0);
+  const quality = useVideoStore((state) => state.quality);
+  const volume = useVideoStore((state) => state.volume);
+  const isMuted = useVideoStore((state) => state.isMuted);
+  const setQuality = useVideoStore((state) => state.setQuality);
+  const setVolume = useVideoStore((state) => state.setVolume);
+  const setMuted = useVideoStore((state) => state.setMuted);
+  const setContent = useVideoStore((state) => state.setContent);
 
-  // Use watch progress hook
   const { trackProgress, markAsCompleted } = useWatchProgress({
     videoId,
     duration,
     enabled: !!videoId,
+    contentType,
+    episodeId,
   });
   const auth = useAuth();
+
+  useEffect(() => {
+    setContent(videoId ?? null, episodeId ?? null, contentType);
+  }, [contentType, episodeId, setContent, videoId]);
+
+  useEffect(() => {
+    if (!videoRef.current) return;
+
+    videoRef.current.volume = volume;
+    videoRef.current.muted = isMuted;
+  }, [isMuted, volume]);
+
+  useEffect(() => {
+    if (!hlsRef.current || availableQualities.length === 0) return;
+
+    if (quality === "auto") {
+      hlsRef.current.currentLevel = -1;
+      return;
+    }
+
+    const selectedQuality = availableQualities.find(
+      (item) => item.label === quality,
+    );
+    if (selectedQuality) {
+      hlsRef.current.currentLevel = selectedQuality.index;
+    }
+  }, [availableQualities, quality]);
 
   // Initialize HLS
   useEffect(() => {
@@ -121,6 +158,17 @@ export function useVideoPlayer({
             qualities.sort((a, b) => b.height - a.height);
             setAvailableQualities(qualities);
             console.log("Available qualities:", qualities);
+
+            if (quality === "auto") {
+              hls.currentLevel = -1;
+            } else {
+              const selectedQuality = qualities.find(
+                (q) => q.label === quality,
+              );
+              if (selectedQuality) {
+                hls.currentLevel = selectedQuality.index;
+              }
+            }
           }
 
           setIsLoading(false);
@@ -146,7 +194,7 @@ export function useVideoPlayer({
                   setTimeout(() => hls.startLoad(), 1000);
                 } else {
                   setError(
-                    "Network error: Unable to load video. Please check your connection and try again."
+                    "Network error: Unable to load video. Please check your connection and try again.",
                   );
                   hls.destroy();
                 }
@@ -158,7 +206,7 @@ export function useVideoPlayer({
                   setTimeout(() => hls.recoverMediaError(), 1000);
                 } else {
                   setError(
-                    "Media error: Video format not supported or corrupted. Please try a different video."
+                    "Media error: Video format not supported or corrupted. Please try a different video.",
                   );
                   hls.destroy();
                 }
@@ -166,7 +214,7 @@ export function useVideoPlayer({
               default:
                 console.log("Fatal error, destroying HLS");
                 setError(
-                  "Video playback error: Unable to play this video. Please try again later."
+                  "Video playback error: Unable to play this video. Please try again later.",
                 );
                 hls.destroy();
                 break;
@@ -278,11 +326,11 @@ export function useVideoPlayer({
           break;
         case "ArrowUp":
           e.preventDefault();
-          setVolume((v) => Math.min(1, v + 0.1));
+          setVolume(Math.min(1, useVideoStore.getState().volume + 0.1));
           break;
         case "ArrowDown":
           e.preventDefault();
-          setVolume((v) => Math.max(0, v - 0.1));
+          setVolume(Math.max(0, useVideoStore.getState().volume - 0.1));
           break;
         case "f":
           e.preventDefault();
@@ -443,10 +491,10 @@ export function useVideoPlayer({
 
     if (qualityLabel === "Auto") {
       hls.currentLevel = -1;
-      setQuality("Auto");
+      setQuality("auto");
     } else {
       const selectedQuality = availableQualities.find(
-        (q) => q.label === qualityLabel
+        (q) => q.label === qualityLabel,
       );
 
       if (selectedQuality) {
@@ -495,7 +543,7 @@ export function useVideoPlayer({
       const newVolume = Math.max(0, Math.min(1, pos));
       setVolume(newVolume);
       videoRef.current.volume = newVolume;
-      setIsMuted(newVolume === 0);
+      setMuted(newVolume === 0);
     }
   };
 
@@ -520,8 +568,9 @@ export function useVideoPlayer({
 
   const toggleMute = () => {
     if (videoRef.current) {
-      videoRef.current.muted = !isMuted;
-      setIsMuted(!isMuted);
+      const nextMuted = !isMuted;
+      videoRef.current.muted = nextMuted;
+      setMuted(nextMuted);
     }
   };
 

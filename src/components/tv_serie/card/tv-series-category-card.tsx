@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 
 import { ApiErrorResponse } from "@/lib/api-error-handler";
-import { categoryControllerFindAllWithCount } from "@/apis/api/categories";
+import { categoriesControllerGetCategoriesWithTvSeriesCount } from "@/apis/api/categories";
 import { toast } from "sonner";
 import { useRouter } from "next/dist/client/components/navigation";
 import { SkeletonCard } from "@/components/skeleton-card";
@@ -71,7 +71,8 @@ export function TvSeriesCategoryList() {
     async function fetchCategories() {
       setLoading(true);
       try {
-        const response = await categoryControllerFindAllWithCount();
+        const response =
+          await categoriesControllerGetCategoriesWithTvSeriesCount();
         if (response?.data) {
           setCategories(response.data.data);
         }
@@ -79,7 +80,7 @@ export function TvSeriesCategoryList() {
         // Handle error if needed
         const apiError = error as ApiErrorResponse;
         toast.error(
-          apiError.message || "Không thể tải danh sách thể loại TV Series"
+          apiError.message || "Không thể tải danh sách thể loại TV Series",
         );
       } finally {
         setLoading(false);

@@ -96,6 +96,7 @@ export function VideoControls({
   volumeHoverValue = 0,
   dragVolume = null,
 }: VideoControlsProps) {
+  const displayQuality = quality === "auto" ? "Auto" : quality;
   // Use dragVolume during drag, otherwise use volume
   const displayVolume = dragVolume !== null ? dragVolume : volume;
   const [localDragVolume, setLocalDragVolume] = useState<number | null>(null);
@@ -308,7 +309,7 @@ export function VideoControls({
               className="hidden md:flex items-center gap-1 px-2 py-1.5 rounded text-white hover:text-purple-400 transition-colors text-sm"
             >
               <Settings className="w-4 h-4" />
-              <span className="hidden lg:inline">{quality}</span>
+              <span className="hidden lg:inline">{displayQuality}</span>
             </button>
           </DropdownMenuTrigger>
 
@@ -321,10 +322,10 @@ export function VideoControls({
             <DropdownMenuItem
               onClick={() => onChangeQuality("Auto")}
               className={`text-white hover:bg-gray-800 ${
-                quality === "Auto" ? "bg-gray-800" : ""
+                displayQuality === "Auto" ? "bg-gray-800" : ""
               }`}
             >
-              Auto {quality === "Auto" && "✓"}
+              Auto {displayQuality === "Auto" && "✓"}
             </DropdownMenuItem>
 
             {availableQualities.map((q) => (
@@ -332,10 +333,10 @@ export function VideoControls({
                 key={q.index}
                 onClick={() => onChangeQuality(q.label)}
                 className={`text-white hover:bg-gray-800 ${
-                  quality === q.label ? "bg-gray-800" : ""
+                  displayQuality === q.label ? "bg-gray-800" : ""
                 }`}
               >
-                {q.label} {quality === q.label && "✓"}
+                {q.label} {displayQuality === q.label && "✓"}
               </DropdownMenuItem>
             ))}
           </DropdownMenuContent>

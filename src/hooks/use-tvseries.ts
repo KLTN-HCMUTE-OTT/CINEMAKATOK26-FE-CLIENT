@@ -89,9 +89,15 @@ export function useTvSeriesByCategory(
     | undefined = params === undefined ? undefined : { ...params, categoryId };
 
   const { data, isLoading, error, refetch } = useQuery({
-    queryKey: queryKeys.tvSeries.list({ type: "category", categoryId, ...params }),
+    queryKey: queryKeys.tvSeries.list({
+      type: "category",
+      categoryId,
+      ...params,
+    }),
     queryFn: async () => {
-      const response = await tvSeriesControllerGetTvSeriesByCategory(fetchParams!);
+      const response = await tvSeriesControllerGetTvSeriesByCategory(
+        fetchParams!,
+      );
       return response.data;
     },
     staleTime: TV_STALE_TIME,
@@ -114,7 +120,7 @@ export function useTvSeriesDetail(id?: string): UseTvSeriesDetailResult {
     queryKey: queryKeys.tvSeries.detail(id ?? ""),
     queryFn: async () => {
       const response = await tvSeriesControllerGetTvSeriesById({ id: id! });
-      return response?.data ?? null;
+      return response?.data?.data ?? null;
     },
     staleTime: TV_STALE_TIME,
     enabled: !!id,

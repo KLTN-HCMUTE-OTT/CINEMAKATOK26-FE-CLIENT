@@ -35,6 +35,8 @@ export default function TVSeriesVideoContent({
   const { resumeData, isLoading: progressLoading } = useWatchProgress({
     videoId: episode?.video.id,
     enabled: true,
+    contentType: "tv_series",
+    episodeId: episode?.id,
   });
 
   useEffect(() => {
@@ -62,7 +64,7 @@ export default function TVSeriesVideoContent({
       .sort((a, b) => a.seasonNumber - b.seasonNumber) // Sort seasons first
       .flatMap(
         (season) =>
-          season.episodes.sort((a, b) => a.episodeNumber - b.episodeNumber) // Then sort episodes within each season
+          season.episodes.sort((a, b) => a.episodeNumber - b.episodeNumber), // Then sort episodes within each season
       );
 
     // console.log(
@@ -99,7 +101,7 @@ export default function TVSeriesVideoContent({
       // );
 
       router.push(
-        `/tv_series/${tvSeries.metaData.title}-${tvSeries.id}/episode/${nextEpisode.episodeTitle}-${nextEpisode.id}`
+        `/tv_series/${tvSeries.metaData.title}-${tvSeries.id}/episode/${nextEpisode.episodeTitle}-${nextEpisode.id}`,
       );
     }
   };
@@ -112,7 +114,7 @@ export default function TVSeriesVideoContent({
       .sort((a, b) => a.seasonNumber - b.seasonNumber) // Sort seasons first
       .flatMap(
         (season) =>
-          season.episodes.sort((a, b) => a.episodeNumber - b.episodeNumber) // Then sort episodes within each season
+          season.episodes.sort((a, b) => a.episodeNumber - b.episodeNumber), // Then sort episodes within each season
       );
 
     const currentIndex = allEpisodes.findIndex((ep) => ep.id === episode.id);
@@ -120,7 +122,7 @@ export default function TVSeriesVideoContent({
       const prevEpisode = allEpisodes[currentIndex - 1];
       console.log("Prev Episode Click:", prevEpisode);
       router.push(
-        `/tv_series/${tvSeries.metaData.title}-${tvSeries.id}/episode/${prevEpisode.episodeTitle}-${prevEpisode.id}`
+        `/tv_series/${tvSeries.metaData.title}-${tvSeries.id}/episode/${prevEpisode.episodeTitle}-${prevEpisode.id}`,
       );
     }
   };
@@ -158,7 +160,7 @@ export default function TVSeriesVideoContent({
     {
       label: `Season ${
         tvSeries?.seasons.find((season) =>
-          season.episodes.some((ep) => ep.id === episodeId)
+          season.episodes.some((ep) => ep.id === episodeId),
         )?.seasonNumber
       }`,
       href: "#",
@@ -182,6 +184,7 @@ export default function TVSeriesVideoContent({
               poster={episode?.video.thumbnailUrl || ""}
               autoPlay={true}
               videoId={episode?.video.id}
+              episodeId={episode?.id}
               initialTime={skipInitialTime ? 0 : resumeData?.watchedDuration}
               sprites={videoDetails?.sprites}
               vttFiles={videoDetails?.vttFiles}
@@ -191,7 +194,7 @@ export default function TVSeriesVideoContent({
               episodeIndex={episode?.episodeNumber}
               totalEpisodes={
                 tvSeries?.seasons.find((season) =>
-                  season.episodes.some((ep) => ep.id === episodeId)
+                  season.episodes.some((ep) => ep.id === episodeId),
                 )?.episodes.length || 0
               }
               onPrevEpisode={handlePrevEpisode}

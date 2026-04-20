@@ -52,7 +52,9 @@ function TVSeriesPageContent({
       setError(null);
 
       try {
-        const response = await tvSeriesControllerGetTvSeriesById({ id: tvSeriesId });
+        const response = await tvSeriesControllerGetTvSeriesById({
+          id: tvSeriesId,
+        });
 
         if (response?.data) {
           setTVSeriesData(response.data);
@@ -63,7 +65,7 @@ function TVSeriesPageContent({
       } catch (err) {
         console.error("Error fetching movie:", err);
         setError(
-          err instanceof Error ? err.message : "Lỗi khi tải dữ liệu phim"
+          err instanceof Error ? err.message : "Lỗi khi tải dữ liệu phim",
         );
       } finally {
         setIsLoading(false);
@@ -166,25 +168,18 @@ export default function TVSeriesPage({ params }: Props) {
     const possibleUUID = parts.slice(-5).join("-");
     if (
       possibleUUID.match(
-        /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+        /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i,
       )
     ) {
       tvSeriesId = possibleUUID;
     }
   }
 
-  // Get contentId from initial fetch (we need this for the Provider)
-  const [initialContentId, setInitialContentId] = useState<string>("");
-
   const { result, isLoading, error } = useTvSeriesDetail(tvSeriesId);
-  useEffect(() => {
-    if (result && result.metaData && !initialContentId) {
-      setInitialContentId(result.metaData.id);
-    }
-  }, [result, initialContentId]);
+  const resolvedContentId = result?.metaData?.id || result?.id || "";
 
-  // Don't render until we have contentId
-  if (!initialContentId) {
+  // Keep spinner only while detail request is in-flight
+  if (isLoading && !resolvedContentId) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-gray-900 via-slate-900 to-black flex items-center justify-center">
         <Loader2 className="w-8 h-8 animate-spin text-purple-500" />
@@ -192,8 +187,24 @@ export default function TVSeriesPage({ params }: Props) {
     );
   }
 
+  if (error) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-gray-900 via-slate-900 to-black flex items-center justify-center px-4 text-center text-red-300">
+        Cannot load TV Series information. Please try again later.
+      </div>
+    );
+  }
+
+  if (!tvSeriesId || !result || !resolvedContentId) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-gray-900 via-slate-900 to-black flex items-center justify-center px-4 text-center text-gray-200">
+        TV Series not found.
+      </div>
+    );
+  }
+
   return (
-    <ActionsProvider contentId={initialContentId}>
+    <ActionsProvider contentId={resolvedContentId}>
       <TVSeriesPageContent tvSeriesId={tvSeriesId} />
     </ActionsProvider>
   );

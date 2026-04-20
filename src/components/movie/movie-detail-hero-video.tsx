@@ -44,6 +44,7 @@ export function MovieDetailHeroVideo({
   const { resumeData, isLoading: progressLoading } = useWatchProgress({
     videoId,
     enabled: true,
+    contentType: "movie",
   });
 
   useEffect(() => {
@@ -60,7 +61,7 @@ export function MovieDetailHeroVideo({
     if (url.includes("embed")) return url;
 
     const videoIdMatch = url.match(
-      /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([^&\n?#]+)/
+      /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([^&\n?#]+)/,
     );
     const videoId = videoIdMatch ? videoIdMatch[1] : url;
 
