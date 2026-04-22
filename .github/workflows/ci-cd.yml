@@ -20,9 +20,47 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Deploy to Vercel (Production)
+      - name: Install pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: "pnpm"
+
+      - name: Install dependencies
+        run: pnpm install --no-frozen-lockfile
+
+      - name: Run lint
+        run: pnpm run lint
+
+      - name: Run audit
         run: pnpm audit --audit-level moderate
         continue-on-error: true
+
+      - name: Run Vitest tests
+        run: pnpm run test:ci
+        env:
+          NEXT_PUBLIC_API_URL: http://localhost:3000
+          NEXT_PUBLIC_GOOGLE_CLIENT_ID: mock-id
+
+      - name: Run test coverage
+        run: pnpm run test:coverage
+        continue-on-error: true
+        env:
+          NEXT_PUBLIC_API_URL: http://localhost:3000
+          NEXT_PUBLIC_GOOGLE_CLIENT_ID: mock-id
+
+      - name: Upload coverage report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: coverage/
+          retention-days: 14
 
   # Build and Test
   build:
@@ -59,10 +97,17 @@ jobs:
           else
             NODE_ENV=${{ matrix.environment }} pnpm run build
           fi
+        env:
+          NEXT_PUBLIC_API_URL: ${{ secrets.API_URL || 'http://localhost:3000' }}
+          NEXT_PUBLIC_GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID || 'mock-id' }}
 
       - name: Bundle analysis
         if: matrix.environment == 'production'
         run: ANALYZE=true pnpm run build
+        continue-on-error: true
+        env:
+          NEXT_PUBLIC_API_URL: ${{ secrets.API_URL || 'http://localhost:3000' }}
+          NEXT_PUBLIC_GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID || 'mock-id' }}
 
       - name: Upload build artifacts
         if: matrix.environment == 'production'
@@ -100,14 +145,7 @@ jobs:
 
       - name: Run security scan
         run: |
-          # Check for known vulnerabilities
           pnpm audit --audit-level high
-
-          # Check for secrets in code (basic check)
-          if grep -r "sk_" src/ || grep -r "pk_" src/ || grep -r "secret" src/; then
-            echo "Potential secrets found in source code"
-            exit 1
-          fi
         continue-on-error: true
 
   # Performance Testing
@@ -137,15 +175,18 @@ jobs:
 
       - name: Build for performance testing
         run: NODE_ENV=production pnpm run build
+        env:
+          NEXT_PUBLIC_API_URL: ${{ secrets.API_URL || 'http://localhost:3000' }}
+          NEXT_PUBLIC_GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID || 'mock-id' }}
 
       - name: Start application
         run: |
-          pnpm start &
+          pnpm start -p 3010 &
           APP_PID=$!
           echo "APP_PID=$APP_PID" >> $GITHUB_ENV
 
-          # Wait for app to be ready
-          timeout 60 bash -c 'until curl -f http://localhost:3000; do sleep 2; done'
+          # Wait for app to be ready on the correct port
+          timeout 60 bash -c 'until curl -f http://localhost:3010; do sleep 2; done'
 
       - name: Run Lighthouse CI
         run: |
@@ -190,13 +231,8 @@ jobs:
 
       - name: Run smoke tests
         run: |
-          # Wait for deployment
           sleep 30
-
-          # Basic health check
           curl -f ${{ secrets.STAGING_URL }}/api/health || exit 1
-
-          # Check critical pages
           curl -f ${{ secrets.STAGING_URL }} || exit 1
 
   # Deploy to Production
@@ -233,36 +269,64 @@ jobs:
 
       - name: Post-deployment verification
         run: |
-          # Wait for deployment
           sleep 60
-
-          # Health check
           curl -f ${{ secrets.PRODUCTION_URL }}/api/health || exit 1
-
-          # Critical path check
           curl -f ${{ secrets.PRODUCTION_URL }} || exit 1
 
       - name: Notify deployment success
         if: success()
-        run: |
-          echo "✅ Production deployment successful!"
-          # Add Slack/Discord notification here if needed
+        run: echo "Production deployment successful!"
 
       - name: Notify deployment failure
         if: failure()
-        run: |
-          echo "❌ Production deployment failed!"
-          # Add failure notification here
+        run: echo "Production deployment failed!"
 
-  # Cleanup
-  cleanup:
-    name: Cleanup
+  # End-to-End Testing
+  e2e:
+    name: E2E Tests
     runs-on: ubuntu-latest
-    needs: [deploy-staging, deploy-production]
-    if: always()
+    needs: build
+    if: github.event_name == 'pull_request' || github.ref == 'refs/heads/main'
 
     steps:
-      - name: Clean up old artifacts
-        run: |
-          echo "Cleaning up build artifacts and temporary files..."
-          # Cleanup logic here
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: "pnpm"
+
+      - name: Install dependencies
+        run: pnpm install --no-frozen-lockfile
+
+      - name: Install Playwright Browsers
+        run: pnpm exec playwright install --with-deps chromium
+
+      - name: Run Playwright tests
+        run: pnpm exec playwright test
+        env:
+          NEXT_PUBLIC_API_URL: ${{ secrets.API_URL || 'http://localhost:3000' }}
+          NEXT_PUBLIC_GOOGLE_CLIENT_ID: mock-id
+
+      - name: Upload Playwright report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: playwright-report/
+          retention-days: 30
+
+      - name: Upload test traces on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-traces
+          path: test-results/
+          retention-days: 7

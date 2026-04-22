@@ -15,11 +15,19 @@ export const handlers = [
     return HttpResponse.json({ success: true, user: mockUser, token: 'mock-token' });
   }),
 
+  http.post('*/auth/refresh', () => {
+    return HttpResponse.json({ accessToken: 'mock-refreshed-token' });
+  }),
+
+  http.post('*/auth/logout', () => {
+    return new HttpResponse(null, { status: 200 });
+  }),
+
   http.get('*/watchlist/check', () => {
     return HttpResponse.json(mockWatchlistStatus);
   }),
 
   http.get('*/reviews', () => {
     return HttpResponse.json(mockReviews);
-  })
+  }),
 ];
