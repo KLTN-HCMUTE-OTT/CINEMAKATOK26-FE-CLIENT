@@ -8,7 +8,11 @@
     "start": "next start",
     "lint": "eslint",
     "api:gen": "api2ts",
-    "openapi2ts": "openapi2ts"
+    "openapi2ts": "openapi2ts",
+    "test": "vitest run",
+    "test:ci": "vitest run --coverage.enabled=false",
+    "test:coverage": "vitest run --coverage",
+    "e2e": "playwright test"
   },
   "dependencies": {
     "@baolq/api2ts": "^0.0.10",
@@ -77,15 +81,27 @@
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",
+    "@playwright/test": "^1.59.1",
     "@tailwindcss/postcss": "^4",
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/react": "^16.3.2",
+    "@testing-library/user-event": "^14.6.1",
+    "@types/jest-axe": "^3.5.9",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "@vitest/coverage-v8": "^2.1.8",
     "eslint": "^9",
     "eslint-config-next": "15.5.4",
+    "jest-axe": "^10.0.0",
+    "jsdom": "^24.1.3",
+    "msw": "^2.13.4",
     "postcss": "^8.5",
+    "rolldown": "1.0.0-rc.16",
     "tailwindcss": "^4",
     "tw-animate-css": "1.3.3",
-    "typescript": "^5"
+    "typescript": "^5",
+    "vite": "^5.4.11",
+    "vitest": "^2.1.8"
   }
 }
