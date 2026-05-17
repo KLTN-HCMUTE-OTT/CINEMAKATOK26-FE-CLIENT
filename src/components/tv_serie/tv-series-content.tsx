@@ -14,6 +14,7 @@ import { EpisodeReviewSection } from "./section/episode-review-section";
 import { useRouter } from "next/navigation";
 import { getS3Url } from "@/hooks/aws";
 import { ResumeDialog } from "@/components/ui/resume-dialog";
+import { WatchPartyQuickButton } from "@/components/watch-party/watch-party-quick-button";
 
 interface TVSeriesPageContentProps {
   episodeId: string;
@@ -236,6 +237,20 @@ export default function TVSeriesVideoContent({
                 })}
               </ol>
             </nav>
+            {/* Watch Party button */}
+            {episode && (
+              <div className="flex mb-4">
+                <WatchPartyQuickButton
+                  content={episode}
+                  contentType="episode"
+                  seriesId={tvSeries?.id}
+                  seriesTitle={tvSeries?.metaData.title}
+                  posterUrl={tvSeries?.metaData.thumbnail}
+                  description={tvSeries?.metaData.description}
+                />
+              </div>
+            )}
+
             <div>
               <DetailInfoSection
                 metaData={tvSeries?.metaData || ({} as API.ContentDto)}

@@ -292,6 +292,22 @@ export default function NavMenu() {
           )}
         </div>
 
+        {/* Watch Party */}
+        <div className="border-b border-gray-800">
+          <Link
+            href="/watch-party/rooms"
+            className="w-full flex items-center justify-between px-4 py-3 text-white font-medium hover:bg-white/5 transition-colors"
+          >
+            <span className="flex items-center gap-2">
+              <span className="relative flex h-2 w-2">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-purple-400 opacity-75" />
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-purple-500" />
+              </span>
+              Watch Party
+            </span>
+          </Link>
+        </div>
+
         {/* Blog */}
         <div className="border-b border-gray-800">
           <button
@@ -361,6 +377,22 @@ export default function NavMenu() {
                 <ListItem href="/sports" title="Sports" />
               </ul>
             </NavigationMenuContent>
+          </NavigationMenuItem>
+
+          {/* Watch Party */}
+          <NavigationMenuItem>
+            <NavigationMenuLink asChild>
+              <Link
+                href="/watch-party/rooms"
+                className="inline-flex items-center gap-2 px-3 py-2 text-sm font-medium text-white hover:text-purple-400 transition-colors rounded-md hover:bg-white/10"
+              >
+                <span className="relative flex h-2 w-2">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-purple-400 opacity-75" />
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-purple-500" />
+                </span>
+                Watch Party
+              </Link>
+            </NavigationMenuLink>
           </NavigationMenuItem>
 
           {/* Blog */}

@@ -548,6 +548,28 @@ declare namespace API {
     parentReplyId?: string;
   };
 
+  type CreateRoomRequest = {
+    /** Video ID for the watch party */
+    videoId: string;
+    /** Display title for the room */
+    title: string;
+    /** Optional password to restrict joins */
+    password?: string;
+    /** Whether the room is discoverable in the public rooms list (default true) */
+    isPublic?: boolean;
+  };
+
+  type CreateRoomResponse = {
+    roomId: string;
+    inviteCode: string;
+  };
+
+  type CreateRoomResponseResponseDto = {
+    statusCode: number;
+    message: string;
+    data: CreateRoomResponse;
+  };
+
   type CreateSeasonDto = {
     /** Season number */
     seasonNumber: number;
@@ -793,6 +815,21 @@ declare namespace API {
   type ForgotPasswordRequest = {
     /** User email to send OTP */
     email: string;
+  };
+
+  type InviteLookupResponse = {
+    roomId: string;
+    title: string;
+    videoId: string;
+    requirePassword: boolean;
+    memberCount: number;
+    maxMembers: number;
+  };
+
+  type InviteLookupResponseResponseDto = {
+    statusCode: number;
+    message: string;
+    data: InviteLookupResponse;
   };
 
   type LoginResponse = {
@@ -1347,6 +1384,29 @@ declare namespace API {
     statusCode: number;
     message: string;
     data: ReviewReplyDto;
+  };
+
+  type RoomListItemDto = {
+    roomId: string;
+    title: string;
+    videoId: string;
+    hostId: string;
+    requirePassword: boolean;
+    isPublic: boolean;
+    memberCount: number;
+    maxMembers: number;
+    createdAt: number;
+  };
+
+  type RoomListResponse = {
+    items: RoomListItemDto[];
+    total: number;
+  };
+
+  type RoomListResponseResponseDto = {
+    statusCode: number;
+    message: string;
+    data: RoomListResponse;
   };
 
   type SeasonDto = {
@@ -2081,6 +2141,22 @@ declare namespace API {
   type WatchListControllerRemoveFromWatchListParams = {
     /** Content ID to remove */
     contentId: string;
+  };
+
+  type WatchPartyControllerCloseRoomParams = {
+    id: string;
+  };
+
+  type WatchPartyControllerListRoomsParams = {
+    scope?: "public" | "all";
+    limit?: number;
+    offset?: number;
+    /** Filter by videoId */
+    videoId?: string;
+  };
+
+  type WatchPartyControllerLookupInviteParams = {
+    code: string;
   };
 
   type WatchProgressControllerDeleteWatchProgressParams = {

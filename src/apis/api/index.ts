@@ -25,6 +25,7 @@ import * as payments from "./payments";
 import * as streaming from "./streaming";
 import * as auditLogs from "./auditLogs";
 import * as analytics from "./analytics";
+import * as watchParty from "./watchParty";
 export default {
   auth,
   users,
@@ -49,4 +50,5 @@ export default {
   streaming,
   auditLogs,
   analytics,
+  watchParty,
 };
