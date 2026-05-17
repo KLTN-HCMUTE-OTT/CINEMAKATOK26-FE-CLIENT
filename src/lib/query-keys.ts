@@ -97,4 +97,14 @@ export const queryKeys = {
   watchProgress: {
     resume: (videoId: string) => ["watchProgress", "resume", videoId] as const,
   },
+
+  watchParty: {
+    all: ["watchParty"] as const,
+    rooms: (params?: Record<string, unknown>) =>
+      [...["watchParty"], "rooms", params] as const,
+    invite: (code: string) => [...["watchParty"], "invite", code] as const,
+    myRoom: () => [...["watchParty"], "myRoom"] as const,
+    content: (videoId: string) =>
+      [...["watchParty"], "content", videoId] as const,
+  },
 } as const;

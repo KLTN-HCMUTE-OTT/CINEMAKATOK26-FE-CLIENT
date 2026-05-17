@@ -14,6 +14,7 @@ import { Loader2 } from "lucide-react";
 import { use, useEffect, useState } from "react";
 import { LoadingErrorWrapper } from "@/components/loading-error-wrapper";
 import { ButtonAction } from "@/components/ui/button-action";
+import { WatchPartyQuickButton } from "@/components/watch-party/watch-party-quick-button";
 
 interface Props {
   params: Promise<{ id: string }>;
@@ -163,6 +164,18 @@ function MoviePageContent({ movieId }: { movieId: string | undefined }) {
                     }
                     shareThumbnail={metaData.thumbnail}
                   />
+
+                  {/* Watch Party button */}
+                  {movie && (
+                    <div className="flex">
+                      <WatchPartyQuickButton
+                        content={movie}
+                        contentType="movie"
+                        posterUrl={metaData.thumbnail}
+                        description={metaData.description}
+                      />
+                    </div>
+                  )}
                 </div>
                 {/* Right: Movie Info, Recommended & Reviews */}
                 <div className="flex-1 space-y-12">

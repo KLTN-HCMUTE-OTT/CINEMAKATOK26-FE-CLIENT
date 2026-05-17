@@ -14,6 +14,7 @@ import { Header } from "@/components/header";
 import { useAuth } from "@/hooks/use-auth";
 import { TrendingMoviesList } from "@/components/trending-movies";
 import { useUIStore } from "@/store";
+import { ActiveRoomsPreview } from "@/components/watch-party/active-rooms-preview";
 
 function HomeContent() {
   const searchParams = useSearchParams();
@@ -42,6 +43,7 @@ function HomeContent() {
       <div className="space-y-16 py-8">
         {/* {isAuthenticated && <RecommendedTvShows />} */}
         <TrendingMoviesList page={1} limit={10} />
+        <ActiveRoomsPreview />
         <NewReleases />
       </div>
 
