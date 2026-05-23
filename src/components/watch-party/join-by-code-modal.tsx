@@ -36,7 +36,7 @@ export function JoinByCodeModal({ open, onClose }: JoinByCodeModalProps) {
     setError(null);
     try {
       const res = await watchPartyControllerLookupInvite({
-        code: code.trim().toLowerCase(),
+        code: code.trim().toUpperCase(),
       });
       const data = res.data?.data;
       if (!data) throw new Error("Room not found");
@@ -65,7 +65,7 @@ export function JoinByCodeModal({ open, onClose }: JoinByCodeModalProps) {
 
   return (
     <Dialog open={open} onOpenChange={(v) => !v && handleClose()}>
-      <DialogContent className="bg-gray-900 border border-white/10 text-white max-w-md p-0 overflow-hidden">
+      <DialogContent showCloseButton={false} className="bg-gray-900 border border-white/10 text-white max-w-md p-0 overflow-hidden">
         <div className="relative">
           {/* Header gradient strip */}
           <div className="h-1 bg-gradient-to-r from-purple-600 via-blue-500 to-purple-600" />

@@ -11,14 +11,16 @@ const reasonMessages: Record<RoomCloseReason, string> = {
   host_left: "The host left — the room has been closed.",
   expired: "This room has expired.",
   idle: "The room closed due to inactivity.",
+  admin_closed: "An administrator has closed this room.",
 };
 
 interface RoomClosedDialogProps {
   open: boolean;
   reason: RoomCloseReason | null;
+  customReason?: string | null;
 }
 
-export function RoomClosedDialog({ open, reason }: RoomClosedDialogProps) {
+export function RoomClosedDialog({ open, reason, customReason }: RoomClosedDialogProps) {
   const router = useRouter();
 
   return (
@@ -32,9 +34,14 @@ export function RoomClosedDialog({ open, reason }: RoomClosedDialogProps) {
           <DialogTitle className="text-lg font-bold text-white mb-2">
             Room closed
           </DialogTitle>
-          <p className="text-sm text-gray-400 mb-6">
-            {reason ? reasonMessages[reason] : "This watch party has ended."}
-          </p>
+          <div className="mb-6">
+            <p className="text-sm text-gray-400">
+              {reason ? reasonMessages[reason] : "This watch party has ended."}
+            </p>
+            {customReason && (
+              <p className="text-xs text-gray-500 italic mt-1">Reason: {customReason}</p>
+            )}
+          </div>
           <Button
             onClick={() => router.push("/watch-party/rooms")}
             className="w-full bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white"

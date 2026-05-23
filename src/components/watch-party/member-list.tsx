@@ -1,7 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { Crown, MicOff, ShieldBan, MoreVertical, Volume2, ShieldCheck } from "lucide-react";
+import { Crown, MicOff, ShieldBan, MoreVertical, Volume2, ShieldCheck, ShieldAlert } from "lucide-react";
+import { format } from "date-fns";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -11,16 +12,20 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import type { RoomMember } from "@/types/watch-party";
+import type { BannedMember } from "@/store/watch-party.store";
 
 interface MemberListProps {
   members: RoomMember[];
   hostId?: string;
   currentUserId: string;
   isHost: boolean;
+  isCurrentUserAdmin?: boolean;
   mutedUsers: Set<string>;
   bannedUsers: Set<string>;
+  bannedMemberDetails: Map<string, BannedMember>;
   onMute: (userId: string, durationSec?: number) => void;
   onUnmute: (userId: string) => void;
+  onKick: (userId: string) => void;
   onBan: (userId: string, durationSec?: number) => void;
   onUnban: (userId: string) => void;
 }
@@ -44,17 +49,24 @@ export function MemberList({
   hostId,
   currentUserId,
   isHost,
+  isCurrentUserAdmin = false,
   mutedUsers,
   bannedUsers,
+  bannedMemberDetails,
   onMute,
   onUnmute,
+  onKick,
   onBan,
   onUnban,
 }: MemberListProps) {
+  const [failedAvatars, setFailedAvatars] = useState<Set<string>>(new Set());
+  const bannedList = Array.from(bannedMemberDetails.values());
+
   return (
     <div className="h-full overflow-y-auto py-2">
       {members.map((member) => {
         const isThisHost = member.userId === hostId;
+        const isThisAdmin = member.role === 'admin';
         const isMe = member.userId === currentUserId;
         const isMuted = mutedUsers.has(member.userId);
         const isBanned = bannedUsers.has(member.userId);
@@ -66,11 +78,18 @@ export function MemberList({
           >
             {/* Avatar */}
             <div className="relative flex-none">
-              {member.avatarUrl ? (
+              {member.avatarUrl && !failedAvatars.has(member.userId) ? (
                 <img
                   src={member.avatarUrl}
                   alt={member.displayName}
                   className="w-8 h-8 rounded-full object-cover"
+                  onError={() =>
+                    setFailedAvatars((prev) => {
+                      const next = new Set(prev);
+                      next.add(member.userId);
+                      return next;
+                    })
+                  }
                 />
               ) : (
                 <div
@@ -82,6 +101,11 @@ export function MemberList({
               {isThisHost && (
                 <div className="absolute -bottom-0.5 -right-0.5 w-4 h-4 rounded-full bg-amber-500 flex items-center justify-center">
                   <Crown className="w-2.5 h-2.5 text-white" />
+                </div>
+              )}
+              {!isThisHost && isThisAdmin && (
+                <div className="absolute -bottom-0.5 -right-0.5 w-4 h-4 rounded-full bg-blue-600 flex items-center justify-center">
+                  <ShieldAlert className="w-2.5 h-2.5 text-white" />
                 </div>
               )}
             </div>
@@ -104,6 +128,12 @@ export function MemberList({
                 {isThisHost && (
                   <span className="text-[10px] text-amber-400 font-medium">Host</span>
                 )}
+                {!isThisHost && isThisAdmin && (
+                  <span className="inline-flex items-center gap-0.5 text-[10px] text-blue-400 font-medium">
+                    <ShieldAlert className="w-2.5 h-2.5" />
+                    Admin
+                  </span>
+                )}
                 {isMuted && (
                   <span className="inline-flex items-center gap-0.5 text-[10px] text-gray-500">
                     <MicOff className="w-2.5 h-2.5" />
@@ -119,8 +149,8 @@ export function MemberList({
               </div>
             </div>
 
-            {/* Host actions (only shown for other members when current user is host) */}
-            {isHost && !isMe && (
+            {/* Moderation actions: host can moderate non-admins; platform admin can moderate anyone */}
+            {(isHost || isCurrentUserAdmin) && !isMe && (!isThisAdmin || isCurrentUserAdmin) && (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <button className="opacity-0 group-hover:opacity-100 p-1 rounded text-gray-500 hover:text-white hover:bg-white/10 transition-all">
@@ -173,7 +203,7 @@ export function MemberList({
                   <DropdownMenuSeparator className="bg-white/10" />
 
                   <DropdownMenuItem
-                    onClick={() => onBan(member.userId, 0)}
+                    onClick={() => onKick(member.userId)}
                     className="text-sm cursor-pointer hover:bg-white/10 focus:bg-white/10 text-orange-400"
                   >
                     <ShieldBan className="w-3.5 h-3.5 mr-2" />
@@ -213,9 +243,72 @@ export function MemberList({
         );
       })}
 
-      {members.length === 0 && (
+      {members.length === 0 && bannedList.length === 0 && (
         <div className="flex items-center justify-center h-24 text-gray-600 text-sm">
           No members yet
+        </div>
+      )}
+
+      {/* Banned users section (host/admin) */}
+      {(isHost || isCurrentUserAdmin) && bannedList.length > 0 && (
+        <div className="mt-1 border-t border-white/8 pt-1">
+          <div className="px-3 py-1.5 flex items-center gap-1.5">
+            <ShieldBan className="w-3 h-3 text-red-500/60" />
+            <span className="text-[10px] text-gray-500 uppercase tracking-wider font-semibold">
+              Banned ({bannedList.length})
+            </span>
+          </div>
+          {bannedList.map((banned) => (
+            <div
+              key={banned.userId}
+              className="flex items-center gap-2.5 px-3 py-2 group opacity-60 hover:opacity-100 transition-opacity"
+            >
+              {/* Avatar */}
+              <div className="flex-none">
+                {banned.avatarUrl && !failedAvatars.has(banned.userId) ? (
+                  <img
+                    src={banned.avatarUrl}
+                    alt={banned.displayName}
+                    className="w-8 h-8 rounded-full object-cover grayscale"
+                    onError={() =>
+                      setFailedAvatars((prev) => {
+                        const next = new Set(prev);
+                        next.add(banned.userId);
+                        return next;
+                      })
+                    }
+                  />
+                ) : (
+                  <div
+                    className={`w-8 h-8 rounded-full bg-gradient-to-br ${getAvatarColor(banned.userId)} flex items-center justify-center text-white text-xs font-bold grayscale`}
+                  >
+                    {banned.displayName[0]?.toUpperCase() ?? "?"}
+                  </div>
+                )}
+              </div>
+
+              {/* Name + ban duration */}
+              <div className="flex-1 min-w-0">
+                <span className="text-sm text-gray-400 truncate block">
+                  {banned.displayName}
+                </span>
+                <span className="text-[10px] text-red-500/70">
+                  {banned.until === null
+                    ? "Permanent ban"
+                    : `Until ${format(new Date(banned.until), "HH:mm, dd MMM")}`}
+                </span>
+              </div>
+
+              {/* Unban button */}
+              <button
+                onClick={() => onUnban(banned.userId)}
+                title="Unban"
+                className="opacity-0 group-hover:opacity-100 flex items-center gap-1 text-xs text-green-400 hover:text-green-300 px-2 py-1 rounded hover:bg-green-500/10 transition-all"
+              >
+                <ShieldCheck className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          ))}
         </div>
       )}
     </div>

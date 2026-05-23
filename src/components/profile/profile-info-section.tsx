@@ -15,12 +15,18 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { useProfile } from "@/hooks/use-profile";
+import {
+  useProfileQuery,
+  useUpdateProfileMutation,
+  useUpdateAvatarMutation,
+} from "@/hooks/use-profile";
 import { useCloudinary } from "@/hooks/use-cloudinary";
 import { Progress } from "@/components/ui/progress";
 
 export function ProfileInfoSection() {
-  const { getProfile, updateProfile, updateAvatar } = useProfile();
+  const profileQuery = useProfileQuery();
+  const updateProfileMutation = useUpdateProfileMutation();
+  const updateAvatarMutation = useUpdateAvatarMutation();
   const { uploadImage, isUploading, uploadProgress } = useCloudinary();
 
   const [isEditing, setIsEditing] = useState(false);
@@ -40,50 +46,36 @@ export function ProfileInfoSection() {
 
   const [avatarPreview, setAvatarPreview] = useState("");
 
-  // Load profile data on mount
+  // Populate form when profile data is available
   useEffect(() => {
-    const loadProfile = async () => {
+    const profile = profileQuery.data;
+    if (!profile) return;
+
+    const avatarUrl = profile.avatar || "";
+    let dateOfBirth = "";
+    if (typeof profile.dateOfBirth === "string" && profile.dateOfBirth) {
       try {
-        const profile = await getProfile();
-        console.log("Loaded profile:", profile);
-        console.log("Avatar URL:", profile?.avatar);
-        if (profile) {
-          const avatarUrl = profile.avatar || "";
-
-          // Format dateOfBirth from ISO to YYYY-MM-DD for input[type="date"]
-          let dateOfBirth = "";
-          if (typeof profile.dateOfBirth === "string" && profile.dateOfBirth) {
-            try {
-              const date = new Date(profile.dateOfBirth);
-              if (!isNaN(date.getTime())) {
-                dateOfBirth = date.toISOString().split("T")[0];
-              }
-            } catch (e) {
-              console.error("Invalid date format:", profile.dateOfBirth);
-            }
-          }
-
-          setFormData({
-            name: profile.name || "",
-            email: profile.email || "",
-            gender: profile.gender || "OTHER",
-            dateOfBirth,
-            address: typeof profile.address === "string" ? profile.address : "",
-            phoneNumber:
-              typeof profile.phoneNumber === "string"
-                ? profile.phoneNumber
-                : "",
-            avatar: avatarUrl,
-          });
-          setAvatarPreview(avatarUrl);
-          console.log("Avatar preview set to:", avatarUrl);
+        const date = new Date(profile.dateOfBirth);
+        if (!isNaN(date.getTime())) {
+          dateOfBirth = date.toISOString().split("T")[0];
         }
-      } catch (error) {
-        console.error("Failed to load profile:", error);
+      } catch (e) {
+        console.error("Invalid date format:", profile.dateOfBirth);
       }
-    };
-    loadProfile();
-  }, [getProfile]);
+    }
+
+    setFormData({
+      name: profile.name || "",
+      email: profile.email || "",
+      gender: profile.gender || "OTHER",
+      dateOfBirth,
+      address: typeof profile.address === "string" ? profile.address : "",
+      phoneNumber:
+        typeof profile.phoneNumber === "string" ? profile.phoneNumber : "",
+      avatar: avatarUrl,
+    });
+    setAvatarPreview(avatarUrl);
+  }, [profileQuery.data]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -207,7 +199,7 @@ export function ProfileInfoSection() {
         toast.loading("Uploading avatar to cloud...");
         avatarUrl = await uploadImage(avatarFile);
         // Update avatar on backend
-        await updateAvatar(avatarUrl);
+        await updateAvatarMutation.mutateAsync(avatarUrl);
         toast.dismiss();
         toast.success("Avatar uploaded successfully!");
       }
@@ -234,7 +226,7 @@ export function ProfileInfoSection() {
       console.log("Profile updated:", updateData);
 
       // Update profile information
-      await updateProfile(updateData);
+      await updateProfileMutation.mutateAsync(updateData);
 
       toast.success(" Profile updated successfully!");
       setIsEditing(false);
@@ -246,41 +238,33 @@ export function ProfileInfoSection() {
     }
   };
 
-  const handleCancel = async () => {
-    // Reload profile from API
-    try {
-      const profile = await getProfile();
-      if (profile) {
-        const avatarUrl = profile.avatar || "";
-
-        // Format dateOfBirth from ISO to YYYY-MM-DD for input[type="date"]
-        let dateOfBirth = "";
-        if (typeof profile.dateOfBirth === "string" && profile.dateOfBirth) {
-          try {
-            const date = new Date(profile.dateOfBirth);
-            if (!isNaN(date.getTime())) {
-              dateOfBirth = date.toISOString().split("T")[0];
-            }
-          } catch (e) {
-            console.error("Invalid date format:", profile.dateOfBirth);
+  const handleCancel = () => {
+    // Reset form to cached profile data
+    const profile = profileQuery.data;
+    if (profile) {
+      const avatarUrl = profile.avatar || "";
+      let dateOfBirth = "";
+      if (typeof profile.dateOfBirth === "string" && profile.dateOfBirth) {
+        try {
+          const date = new Date(profile.dateOfBirth);
+          if (!isNaN(date.getTime())) {
+            dateOfBirth = date.toISOString().split("T")[0];
           }
+        } catch (e) {
+          console.error("Invalid date format:", profile.dateOfBirth);
         }
-
-        setFormData({
-          name: profile.name || "",
-          email: profile.email || "",
-          gender: profile.gender || "OTHER",
-          dateOfBirth,
-          address: typeof profile.address === "string" ? profile.address : "",
-          phoneNumber:
-            typeof profile.phoneNumber === "string" ? profile.phoneNumber : "",
-          avatar: avatarUrl,
-        });
-        setAvatarPreview(avatarUrl);
-        console.log("Cancel - Avatar preview reset to:", avatarUrl);
       }
-    } catch (error) {
-      console.error("Failed to reload profile:", error);
+      setFormData({
+        name: profile.name || "",
+        email: profile.email || "",
+        gender: profile.gender || "OTHER",
+        dateOfBirth,
+        address: typeof profile.address === "string" ? profile.address : "",
+        phoneNumber:
+          typeof profile.phoneNumber === "string" ? profile.phoneNumber : "",
+        avatar: avatarUrl,
+      });
+      setAvatarPreview(avatarUrl);
     }
     setIsEditing(false);
     setImageError(false);

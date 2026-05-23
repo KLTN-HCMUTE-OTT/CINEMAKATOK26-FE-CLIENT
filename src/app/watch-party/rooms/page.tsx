@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Plus, Search, SlidersHorizontal, RefreshCw, Tv2 } from "lucide-react";
+import { Plus, Search, SlidersHorizontal, RefreshCw, Tv2, Lock, AlertCircle } from "lucide-react";
 import { Header } from "@/components/header";
 import { Footer } from "@/components/footer";
 import { RoomCard } from "@/components/watch-party/room-card";
@@ -12,6 +12,8 @@ import { useAuth } from "@/hooks/use-auth";
 import { useUIStore } from "@/store";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
+import type { RoomListItem } from "@/types/watch-party";
 
 export default function WatchPartyRoomsPage() {
   const router = useRouter();
@@ -22,6 +24,9 @@ export default function WatchPartyRoomsPage() {
   const [filterPassword, setFilterPassword] = useState<
     "all" | "free" | "password"
   >("all");
+  const [passwordRoom, setPasswordRoom] = useState<RoomListItem | null>(null);
+  const [passwordInput, setPasswordInput] = useState("");
+  const [passwordError, setPasswordError] = useState(false);
 
   const { rooms, total, isLoading, error, refetch } = useRoomList({
     scope: "public",
@@ -54,6 +59,30 @@ export default function WatchPartyRoomsPage() {
       return;
     }
     setShowJoinModal(true);
+  };
+
+  const handleRoomClick = (room: RoomListItem) => {
+    if (!isAuthenticated) {
+      openLoginModal();
+      return;
+    }
+    if (room.requirePassword) {
+      setPasswordRoom(room);
+      setPasswordInput("");
+      setPasswordError(false);
+    } else {
+      router.push(`/watch-party/${room.roomId}`);
+    }
+  };
+
+  const handlePasswordJoin = () => {
+    if (!passwordRoom) return;
+    if (!passwordInput.trim()) {
+      setPasswordError(true);
+      return;
+    }
+    router.push(`/watch-party/${passwordRoom.roomId}?password=${encodeURIComponent(passwordInput)}`);
+    setPasswordRoom(null);
   };
 
   return (
@@ -183,7 +212,7 @@ export default function WatchPartyRoomsPage() {
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
             {filtered.map((room) => (
-              <RoomCard key={room.roomId} room={room} />
+              <RoomCard key={room.roomId} room={room} onJoin={handleRoomClick} />
             ))}
           </div>
         )}
@@ -195,6 +224,52 @@ export default function WatchPartyRoomsPage() {
         open={showJoinModal}
         onClose={() => setShowJoinModal(false)}
       />
+
+      {/* Password dialog for protected rooms */}
+      <Dialog open={!!passwordRoom} onOpenChange={(v) => !v && setPasswordRoom(null)}>
+        <DialogContent showCloseButton={false} className="bg-gray-900 border border-white/10 text-white max-w-sm p-0 overflow-hidden">
+          <div className="h-1 bg-gradient-to-r from-purple-600 via-blue-500 to-purple-600" />
+          <div className="p-6 space-y-4">
+            <div className="flex items-center justify-between">
+              <DialogTitle className="text-base font-bold text-white">Enter room password</DialogTitle>
+            </div>
+            <div className="flex items-center gap-2 text-sm text-amber-400 bg-amber-500/10 border border-amber-500/20 rounded-lg px-3 py-2">
+              <Lock className="w-4 h-4 flex-shrink-0" />
+              <span className="truncate">{passwordRoom?.title}</span>
+            </div>
+            <input
+              value={passwordInput}
+              onChange={(e) => { setPasswordInput(e.target.value); setPasswordError(false); }}
+              onKeyDown={(e) => e.key === "Enter" && handlePasswordJoin()}
+              type="password"
+              placeholder="Room password"
+              autoFocus
+              className="w-full px-4 py-3 rounded-lg bg-white/5 border border-white/10 text-white placeholder-gray-600 text-sm focus:outline-none focus:border-purple-500/60 transition-all"
+            />
+            {passwordError && (
+              <div className="flex items-center gap-2 text-sm text-red-400">
+                <AlertCircle className="w-4 h-4 flex-shrink-0" />
+                Please enter a password
+              </div>
+            )}
+            <div className="flex gap-2">
+              <Button
+                onClick={() => setPasswordRoom(null)}
+                variant="outline"
+                className="flex-1 border-white/20 text-white bg-transparent hover:bg-white/10"
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={handlePasswordJoin}
+                className="flex-1 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white"
+              >
+                Join room
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

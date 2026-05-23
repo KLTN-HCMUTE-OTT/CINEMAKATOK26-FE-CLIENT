@@ -14,6 +14,7 @@ import type { CreateRoomInput, RoomListItem } from "@/types/watch-party";
 import { useAuthStore } from "@/store";
 import { getWatchPartySocket } from "@/lib/watch-party-socket";
 import { useWatchPartyStore } from "@/store/watch-party.store";
+import type { BannedMember } from "@/store/watch-party.store";
 
 // ── Phase 1: REST hooks ──────────────────────────────────────────────────────
 
@@ -106,39 +107,47 @@ export function useWatchPartyRoom(roomId: string, password?: string) {
   const user = useAuthStore((s) => s.user);
   const store = useWatchPartyStore();
   const joinedRef = useRef(false);
+  const socketRef = useRef<ReturnType<typeof getWatchPartySocket> | null>(null);
 
   useEffect(() => {
     if (!user) return;
 
-    const token =
-      typeof window !== "undefined"
-        ? (sessionStorage.getItem("cinemakatok-auth") &&
-            (() => {
-              try {
-                return JSON.parse(
-                  sessionStorage.getItem("cinemakatok-auth") ?? "{}"
-                )?.state?.accessToken;
-              } catch {
-                return null;
-              }
-            })()) ||
-          null
-        : null;
-
     const socket = getWatchPartySocket(user.id);
+    socketRef.current = socket;
 
-    if (!joinedRef.current) {
-      joinedRef.current = true;
-      socket.emit("room:join", { roomId, password });
-    }
+    socket.on("connect_error", (err: Error) => {
+      let isAuthError = false;
+      try {
+        const parsed = JSON.parse(err.message) as { code?: string };
+        isAuthError = parsed?.code === "UNAUTHORIZED";
+      } catch {
+        isAuthError =
+          (err as any)?.data?.code === "UNAUTHORIZED" ||
+          err.message === "UNAUTHORIZED";
+      }
+      store.setError({
+        code: isAuthError ? "NOT_AUTHORIZED" : "INTERNAL_ERROR",
+        message: err.message,
+      });
+    });
 
+    const emitJoin = () => socket.emit("room:join", { roomId, password });
+
+    // Re-join after reconnect so the server restores socket data (roomId, etc.)
+    const handleReconnect = () => {
+      if (joinedRef.current) emitJoin();
+    };
+    socket.on("connect", handleReconnect);
+
+    // Register ALL listeners before emitting room:join so fast server responses
+    // (e.g. BANNED error returning room:kicked) are never missed.
     socket.on("room:state", (state: any) => store.setRoomState(state));
-    socket.on("room:member-joined", (member: any) => store.addMember(member));
+    socket.on("room:member-joined", (data: any) => store.addMember(data.member));
     socket.on("room:member-left", (data: any) =>
       store.removeMember(data.userId)
     );
     socket.on("video:sync-update", (vs: any) => store.setVideoState(vs));
-    socket.on("chat:new-message", (msg: any) => store.addMessage(msg));
+    socket.on("chat:new-message", (data: any) => store.addMessage(data.message));
     socket.on("reaction:broadcast", (r: any) => store.addReaction(r));
     socket.on("room:member-muted", (data: any) =>
       store.setMemberMuted(data.userId, true)
@@ -146,13 +155,21 @@ export function useWatchPartyRoom(roomId: string, password?: string) {
     socket.on("room:member-unmuted", (data: any) =>
       store.setMemberMuted(data.userId, false)
     );
-    socket.on("room:member-banned", (data: any) =>
-      store.setMemberBanned(data.userId, true)
-    );
+    socket.on("room:member-banned", (data: any) => {
+      // Capture display name while member is still in the members list
+      const { members } = useWatchPartyStore.getState();
+      const member = members.find((m) => m.userId === data.userId);
+      const details: Omit<BannedMember, "userId"> = {
+        displayName: member?.displayName ?? `User ${(data.userId as string).slice(0, 6)}`,
+        avatarUrl: member?.avatarUrl,
+        until: data.until ?? null,
+      };
+      store.setMemberBanned(data.userId, true, details);
+    });
     socket.on("room:member-unbanned", (data: any) =>
       store.setMemberBanned(data.userId, false)
     );
-    socket.on("queue:updated", (queue: any) => store.setQueue(queue));
+    socket.on("queue:updated", (data: any) => store.setQueue(data.queue ?? []));
     socket.on("video:changed", (data: any) => {
       store.setVideoState(data.videoState);
       store.setQueue(data.queue ?? []);
@@ -160,13 +177,26 @@ export function useWatchPartyRoom(roomId: string, password?: string) {
     });
     socket.on("video:queue-empty", () => store.setAwaitingHost(true));
     socket.on("room:closed", (data: any) =>
-      store.setClosed(data?.reason ?? "host_closed")
+      store.setClosed(data?.reason ?? "host_closed", data?.customReason)
     );
     socket.on("room:kicked", (data: any) => store.setKicked(data));
     socket.on("error", (err: any) => store.setError(err));
 
+    if (!joinedRef.current) {
+      joinedRef.current = true;
+      if (socket.connected) {
+        emitJoin();
+      } else {
+        socket.once("connect", emitJoin);
+      }
+    }
+
     return () => {
-      socket.emit("room:leave", { roomId });
+      if (joinedRef.current) {
+        socket.emit("room:leave", { roomId });
+      }
+      socket.off("connect_error");
+      socket.off("connect", handleReconnect);
       socket.off("room:state");
       socket.off("room:member-joined");
       socket.off("room:member-left");
@@ -183,39 +213,46 @@ export function useWatchPartyRoom(roomId: string, password?: string) {
       socket.off("room:closed");
       socket.off("room:kicked");
       socket.off("error");
+      socketRef.current = null;
       joinedRef.current = false;
       store.reset();
     };
   }, [roomId, user?.id]);
 
-  const socket = user ? getWatchPartySocket(user.id) : null;
-
   return {
     ...store,
     isHost: store.room?.hostId === user?.id,
+    isAdmin: user?.isAdmin ?? false,
+    leaveRoom: () => {
+      joinedRef.current = false;
+      socketRef.current?.emit("room:leave", { roomId });
+    },
     syncVideo: (state: { isPlaying: boolean; currentTime: number }) =>
-      socket?.emit("video:sync", { roomId, state }),
+      socketRef.current?.emit("video:sync", { roomId, ...state }),
     sendMessage: (text: string) =>
-      socket?.emit("chat:message", { roomId, text }),
+      socketRef.current?.emit("chat:message", { roomId, text }),
     sendReaction: (emoji: string) =>
-      socket?.emit("reaction:send", { roomId, emoji }),
+      socketRef.current?.emit("reaction:send", { roomId, emoji }),
     muteMember: (userId: string, durationSec?: number) =>
-      socket?.emit("member:mute", { roomId, userId, durationSec }),
+      socketRef.current?.emit("member:mute", { roomId, userId, durationSec }),
     unmuteMember: (userId: string) =>
-      socket?.emit("member:unmute", { roomId, userId }),
+      socketRef.current?.emit("member:unmute", { roomId, userId }),
+    kickMember: (userId: string) =>
+      socketRef.current?.emit("member:kick", { roomId, userId }),
     banMember: (userId: string, durationSec?: number) =>
-      socket?.emit("member:ban", { roomId, userId, durationSec }),
+      socketRef.current?.emit("member:ban", { roomId, userId, durationSec }),
     unbanMember: (userId: string) =>
-      socket?.emit("member:unban", { roomId, userId }),
+      socketRef.current?.emit("member:unban", { roomId, userId }),
     enqueueVideo: (item: any) =>
-      socket?.emit("queue:add", { roomId, ...item }),
+      socketRef.current?.emit("queue:add", { roomId, ...item }),
     removeFromQueue: (index: number) =>
-      socket?.emit("queue:remove", { roomId, index }),
+      socketRef.current?.emit("queue:remove", { roomId, index }),
     reorderQueue: (from: number, to: number) =>
-      socket?.emit("queue:reorder", { roomId, from, to }),
-    playNow: (item: any) => socket?.emit("video:play-now", { roomId, ...item }),
-    playNext: () => socket?.emit("video:play-next", { roomId }),
+      socketRef.current?.emit("queue:reorder", { roomId, from, to }),
+    playNow: (item: any) =>
+      socketRef.current?.emit("video:play-now", { roomId, ...item }),
+    playNext: () => socketRef.current?.emit("video:play-next", { roomId }),
     notifyVideoEnd: (videoId: string) =>
-      socket?.emit("video:end", { roomId, videoId }),
+      socketRef.current?.emit("video:end", { roomId, videoId }),
   };
 }

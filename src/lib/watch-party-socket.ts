@@ -1,20 +1,9 @@
 import { io, Socket } from "socket.io-client";
 import { env } from "@/env";
-import { axiosInstance } from "@/lib/request";
+import { getAccessTokenInMemory, setAccessTokenInMemory } from "@/lib/request";
 
 let socket: Socket | null = null;
 let currentUserId: string | null = null;
-
-function getAccessToken(): string | null {
-  try {
-    const raw = sessionStorage.getItem("cinemakatok-auth");
-    if (!raw) return null;
-    const parsed = JSON.parse(raw) as { state?: { accessToken?: string } };
-    return parsed?.state?.accessToken ?? null;
-  } catch {
-    return null;
-  }
-}
 
 export function getWatchPartySocket(userId: string): Socket {
   if (socket && socket.connected && currentUserId === userId) {
@@ -26,7 +15,7 @@ export function getWatchPartySocket(userId: string): Socket {
     socket = null;
   }
 
-  const token = (axiosInstance.defaults.headers.common?.["Authorization"] as string | undefined)?.replace("Bearer ", "") ?? getAccessToken();
+  const token = getAccessTokenInMemory();
 
   socket = io(`${env.NEXT_PUBLIC_WS_URL}/watch-party`, {
     auth: { token },
@@ -39,12 +28,24 @@ export function getWatchPartySocket(userId: string): Socket {
   currentUserId = userId;
 
   socket.on("connect_error", async (err) => {
-    if ((err as any)?.message === "UNAUTHORIZED" || (err as any)?.data?.code === "UNAUTHORIZED") {
+    let isUnauthorized = false;
+    try {
+      // NestJS WsException serializes payload as JSON in err.message
+      const parsed = JSON.parse(err.message) as { code?: string };
+      isUnauthorized = parsed?.code === "UNAUTHORIZED";
+    } catch {
+      isUnauthorized =
+        err.message === "UNAUTHORIZED" ||
+        (err as any)?.data?.code === "UNAUTHORIZED";
+    }
+
+    if (isUnauthorized) {
       try {
         const res = await fetch("/api/auth/refresh", { method: "POST", credentials: "include" });
         if (res.ok) {
           const body = await res.json() as { accessToken?: string };
           if (body.accessToken && socket) {
+            setAccessTokenInMemory(body.accessToken);
             socket.auth = { token: body.accessToken };
             socket.connect();
           }
