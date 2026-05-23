@@ -7,24 +7,42 @@ import { LiveChat } from "./live-chat";
 import { MemberList } from "./member-list";
 import { ReactionsOverlay } from "./reactions-overlay";
 import { RoomContentInfo, RoomContentCompact } from "./room-content-info";
+import { ContentPickerDialog } from "./content-picker";
+import { QueuePanel } from "./queue-panel";
 import { useRoomContent } from "@/hooks/use-room-content";
-import { Users, MessageSquare, Copy, Check, Crown, Info, X } from "lucide-react";
+import { saveRoomContentRef } from "@/lib/watch-party-content-cache";
+import type { ContentRef } from "@/types/content-ref";
+import { Users, MessageSquare, Copy, Check, Crown, Info, X, LogOut, Film, ListVideo } from "lucide-react";
 import { toast } from "sonner";
 
 interface RoomLayoutProps {
   roomId: string;
   roomState: any;
+  onLeave?: () => void;
+  onEndRoom?: () => void;
 }
 
-export function RoomLayout({ roomId, roomState }: RoomLayoutProps) {
+export function RoomLayout({ roomId, roomState, onLeave, onEndRoom }: RoomLayoutProps) {
   const user = useAuthStore((s) => s.user);
-  const [activeTab, setActiveTab] = useState<"chat" | "members">("chat");
+  const isAdmin = user?.isAdmin ?? false;
+  const [activeTab, setActiveTab] = useState<"chat" | "members" | "queue">("chat");
   const [copied, setCopied] = useState(false);
   const [infoOpen, setInfoOpen] = useState(false);
+  const [pickerOpen, setPickerOpen] = useState(false);
 
-  const { room, members, messages, reactions, videoState, queue, mutedUsers, bannedUsers, awaitingHost, isHost } = roomState;
+  const { room, members, messages, reactions, videoState, queue = [], mutedUsers, bannedUsers, bannedMemberDetails, awaitingHost, isHost } = roomState;
 
   const { contentRef } = useRoomContent(roomId, videoState?.videoId ?? "");
+
+  const handleChangeVideo = (ref: ContentRef) => {
+    saveRoomContentRef(roomId, ref);
+    roomState.playNow({
+      videoId: ref.videoId,
+      title: ref.title,
+      thumbnailUrl: ref.posterUrl,
+      durationSec: ref.durationSec,
+    });
+  };
 
   const copyInvite = async () => {
     if (!room?.inviteCode) return;
@@ -65,6 +83,16 @@ export function RoomLayout({ roomId, roomState }: RoomLayoutProps) {
         </div>
 
         <div className="flex items-center gap-2">
+          {(isHost || isAdmin) && (
+            <button
+              onClick={() => setPickerOpen(true)}
+              className="flex-none flex items-center gap-1.5 text-xs text-gray-400 hover:text-purple-400 transition-colors px-2 py-1 rounded-lg hover:bg-purple-500/10"
+              title="Change video"
+            >
+              <Film className="w-3.5 h-3.5" />
+              Change video
+            </button>
+          )}
           {contentRef && (
             <button
               onClick={() => setInfoOpen((v) => !v)}
@@ -85,6 +113,30 @@ export function RoomLayout({ roomId, roomState }: RoomLayoutProps) {
             {copied ? <Check className="w-3.5 h-3.5 text-green-400" /> : <Copy className="w-3.5 h-3.5" />}
             {room?.inviteCode}
           </button>
+          {isAdmin && !isHost && onEndRoom && (
+            <button
+              onClick={onEndRoom}
+              title="Force-close this room (admin)"
+              className="flex-none flex items-center gap-1.5 text-xs px-2 py-1 rounded-lg transition-colors text-red-400 hover:text-red-300 hover:bg-red-500/10"
+            >
+              <LogOut className="w-3.5 h-3.5" />
+              End room
+            </button>
+          )}
+          {onLeave && (
+            <button
+              onClick={onLeave}
+              title={isHost ? "Close room" : "Leave room"}
+              className={`flex-none flex items-center gap-1.5 text-xs px-2 py-1 rounded-lg transition-colors ${
+                isHost
+                  ? "text-red-400 hover:text-red-300 hover:bg-red-500/10"
+                  : "text-gray-400 hover:text-gray-300 hover:bg-white/5"
+              }`}
+            >
+              <LogOut className="w-3.5 h-3.5" />
+              {isHost ? "End" : "Leave"}
+            </button>
+          )}
         </div>
       </div>
 
@@ -97,6 +149,7 @@ export function RoomLayout({ roomId, roomState }: RoomLayoutProps) {
               videoState={videoState}
               awaitingHost={awaitingHost}
               isHost={isHost}
+              isAdmin={isAdmin}
               onSync={roomState.syncVideo}
               onVideoEnd={roomState.notifyVideoEnd}
             />
@@ -158,29 +211,60 @@ export function RoomLayout({ roomId, roomState }: RoomLayoutProps) {
                     {members.length}
                   </span>
                 </button>
+                <button
+                  onClick={() => setActiveTab("queue")}
+                  className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 text-xs font-semibold transition-all ${
+                    activeTab === "queue"
+                      ? "text-purple-400 border-b-2 border-purple-500"
+                      : "text-gray-500 hover:text-gray-300"
+                  }`}
+                >
+                  <ListVideo className="w-3.5 h-3.5" />
+                  Queue
+                  {queue.length > 0 && (
+                    <span className="text-[10px] bg-gray-700 text-gray-400 rounded-full px-1.5 py-0.5">
+                      {queue.length}
+                    </span>
+                  )}
+                </button>
               </div>
 
               {/* Tab content */}
               <div className="flex-1 overflow-hidden">
-                {activeTab === "chat" ? (
+                {activeTab === "chat" && (
                   <LiveChat
                     messages={messages}
                     currentUserId={user?.id ?? ""}
                     isMuted={isMuted}
                     onSend={roomState.sendMessage}
                   />
-                ) : (
+                )}
+                {activeTab === "members" && (
                   <MemberList
                     members={members}
                     hostId={room?.hostId}
                     currentUserId={user?.id ?? ""}
                     isHost={isHost}
+                    isCurrentUserAdmin={isAdmin}
                     mutedUsers={mutedUsers}
                     bannedUsers={bannedUsers}
+                    bannedMemberDetails={bannedMemberDetails}
                     onMute={roomState.muteMember}
                     onUnmute={roomState.unmuteMember}
+                    onKick={roomState.kickMember}
                     onBan={roomState.banMember}
                     onUnban={roomState.unbanMember}
+                  />
+                )}
+                {activeTab === "queue" && (
+                  <QueuePanel
+                    queue={queue}
+                    isHost={isHost}
+                    isAdmin={isAdmin}
+                    onEnqueue={roomState.enqueueVideo}
+                    onRemove={roomState.removeFromQueue}
+                    onReorder={roomState.reorderQueue}
+                    onPlayNext={roomState.playNext}
                   />
                 )}
               </div>
@@ -188,6 +272,12 @@ export function RoomLayout({ roomId, roomState }: RoomLayoutProps) {
           )}
         </div>
       </div>
+
+      <ContentPickerDialog
+        open={pickerOpen}
+        onOpenChange={setPickerOpen}
+        onConfirm={handleChangeVideo}
+      />
     </div>
   );
 }

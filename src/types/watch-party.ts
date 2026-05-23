@@ -1,4 +1,4 @@
-export type RoomCloseReason = 'host_left' | 'host_closed' | 'expired' | 'idle';
+export type RoomCloseReason = 'host_left' | 'host_closed' | 'expired' | 'idle' | 'admin_closed';
 
 export type WatchPartyErrorCode =
   | 'WRONG_PASSWORD'
@@ -29,6 +29,7 @@ export interface RoomMember {
   displayName: string;
   avatarUrl?: string;
   joinedAt: number;
+  role?: 'host' | 'admin' | 'member';
 }
 
 export interface VideoState {

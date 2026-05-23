@@ -15,6 +15,13 @@ import type {
 const MAX_MESSAGES = 200;
 const MAX_REACTIONS = 30;
 
+export interface BannedMember {
+  userId: string;
+  displayName: string;
+  avatarUrl?: string;
+  until: number | null;
+}
+
 export interface WatchPartyState {
   room: RoomSummary | null;
   members: RoomMember[];
@@ -24,10 +31,13 @@ export interface WatchPartyState {
   queue: QueueItem[];
   mutedUsers: Set<string>;
   bannedUsers: Set<string>;
+  bannedMemberDetails: Map<string, BannedMember>;
   isClosed: boolean;
   closeReason: RoomCloseReason | null;
+  closeCustomReason: string | null;
   isKicked: boolean;
   kickedUntil: number | null;
+  kickedBanReason: string | null;
   error: { code: WatchPartyErrorCode; message?: string } | null;
   awaitingHost: boolean;
 }
@@ -39,6 +49,8 @@ export interface WatchPartyActions {
     videoState: VideoState;
     recentMessages: ChatMessage[];
     queue: QueueItem[];
+    mutedUserIds?: string[];
+    bannedUserIds?: string[];
   }) => void;
   addMember: (member: RoomMember) => void;
   removeMember: (userId: string) => void;
@@ -47,9 +59,9 @@ export interface WatchPartyActions {
   addReaction: (r: Reaction) => void;
   removeReaction: (id: string) => void;
   setMemberMuted: (userId: string, muted: boolean) => void;
-  setMemberBanned: (userId: string, banned: boolean) => void;
-  setClosed: (reason: RoomCloseReason) => void;
-  setKicked: (data: { until?: number | null }) => void;
+  setMemberBanned: (userId: string, banned: boolean, details?: Omit<BannedMember, 'userId'>) => void;
+  setClosed: (reason: RoomCloseReason, customReason?: string) => void;
+  setKicked: (data: { until?: number | null; banReason?: string }) => void;
   setError: (err: { code: WatchPartyErrorCode; message?: string }) => void;
   setQueue: (queue: QueueItem[]) => void;
   setAwaitingHost: (v: boolean) => void;
@@ -67,10 +79,13 @@ const initialState: WatchPartyState = {
   queue: [],
   mutedUsers: new Set(),
   bannedUsers: new Set(),
+  bannedMemberDetails: new Map(),
   isClosed: false,
   closeReason: null,
+  closeCustomReason: null,
   isKicked: false,
   kickedUntil: null,
+  kickedBanReason: null,
   error: null,
   awaitingHost: false,
 };
@@ -86,6 +101,8 @@ export const useWatchPartyStore = create<WatchPartyStore>()((set) => ({
       messages: state.recentMessages.slice(-MAX_MESSAGES),
       queue: state.queue,
       awaitingHost: state.videoState?.status === "awaiting_host",
+      mutedUsers: new Set(state.mutedUserIds ?? []),
+      bannedUsers: new Set(state.bannedUserIds ?? []),
     }),
 
   addMember: (member) =>
@@ -127,17 +144,24 @@ export const useWatchPartyStore = create<WatchPartyStore>()((set) => ({
       return { mutedUsers: next };
     }),
 
-  setMemberBanned: (userId, banned) =>
+  setMemberBanned: (userId, banned, details) =>
     set((s) => {
-      const next = new Set(s.bannedUsers);
-      banned ? next.add(userId) : next.delete(userId);
-      return { bannedUsers: next };
+      const nextSet = new Set(s.bannedUsers);
+      const nextMap = new Map(s.bannedMemberDetails);
+      if (banned) {
+        nextSet.add(userId);
+        if (details) nextMap.set(userId, { userId, ...details });
+      } else {
+        nextSet.delete(userId);
+        nextMap.delete(userId);
+      }
+      return { bannedUsers: nextSet, bannedMemberDetails: nextMap };
     }),
 
-  setClosed: (reason) => set({ isClosed: true, closeReason: reason }),
+  setClosed: (reason, customReason) => set({ isClosed: true, closeReason: reason, closeCustomReason: customReason ?? null }),
 
   setKicked: (data) =>
-    set({ isKicked: true, kickedUntil: data?.until ?? null }),
+    set({ isKicked: true, kickedUntil: data?.until ?? null, kickedBanReason: data?.banReason ?? null }),
 
   setError: (err) => set({ error: err }),
 
@@ -146,5 +170,5 @@ export const useWatchPartyStore = create<WatchPartyStore>()((set) => ({
   setAwaitingHost: (v) => set({ awaitingHost: v }),
 
   reset: () =>
-    set({ ...initialState, mutedUsers: new Set(), bannedUsers: new Set() }),
+    set({ ...initialState, mutedUsers: new Set(), bannedUsers: new Set(), bannedMemberDetails: new Map() }),
 }));

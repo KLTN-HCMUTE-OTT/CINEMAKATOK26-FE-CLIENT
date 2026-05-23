@@ -96,3 +96,7 @@ export { instance as axiosInstance };
 export function setAccessTokenInMemory(token: string | null) {
   accessTokenInMemory = token;
 }
+
+export function getAccessTokenInMemory(): string | null {
+  return accessTokenInMemory;
+}

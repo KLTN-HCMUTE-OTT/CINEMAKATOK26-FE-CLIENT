@@ -14,6 +14,8 @@ import {
   Rewind,
 } from "lucide-react";
 import type { VideoState } from "@/types/watch-party";
+import { videosControllerGetVideoById } from "@/apis/api/videos";
+import { env } from "@/env";
 
 const SYNC_THROTTLE_MS = 500;
 const DRIFT_TOLERANCE_SEC = 1.5;
@@ -30,6 +32,7 @@ interface SyncedVideoPlayerProps {
   videoState: VideoState | null;
   awaitingHost: boolean;
   isHost: boolean;
+  isAdmin?: boolean;
   onSync: (state: { isPlaying: boolean; currentTime: number }) => void;
   onVideoEnd: (videoId: string) => void;
 }
@@ -38,9 +41,12 @@ export function SyncedVideoPlayer({
   videoState,
   awaitingHost,
   isHost,
+  isAdmin = false,
   onSync,
   onVideoEnd,
 }: SyncedVideoPlayerProps) {
+  const canControl = isHost || isAdmin;
+
   // ── Refs ────────────────────────────────────────────────────────────────
   const videoRef = useRef<HTMLVideoElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -63,6 +69,43 @@ export function SyncedVideoPlayer({
   const [dragTime, setDragTime] = useState<number | null>(null);
   const [isProgressDragging, setIsProgressDragging] = useState(false);
 
+  // ── Load video URL when videoId changes ─────────────────────────────────
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video || !videoState?.videoId) return;
+
+    let cancelled = false;
+
+    const loadVideo = async () => {
+      try {
+        const res = await videosControllerGetVideoById({ id: videoState.videoId });
+        const videoUrl = res?.data?.data?.videoUrl;
+        if (!videoUrl || cancelled) return;
+
+        const apiBase = env.NEXT_PUBLIC_API_URL.replace(/\/$/, "");
+        let src: string;
+        if (videoUrl.startsWith("http")) {
+          src = videoUrl;
+        } else if (videoUrl.startsWith("/")) {
+          src = `${apiBase}${videoUrl}`;
+        } else {
+          src = `${apiBase}/local-videos/${videoState.videoId}/dash/manifest.mpd`;
+        }
+
+        video.src = src;
+        video.load();
+      } catch (err) {
+        if (!cancelled) console.error("[SyncedVideoPlayer] Failed to load video:", err);
+      }
+    };
+
+    loadVideo();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [videoState?.videoId]);
+
   // ── Sync helpers ─────────────────────────────────────────────────────────
   const throttledSync = useCallback(
     (state: { isPlaying: boolean; currentTime: number }) => {
@@ -74,10 +117,10 @@ export function SyncedVideoPlayer({
     [onSync]
   );
 
-  // Apply server state → local player (non-host only)
+  // Apply server state → local player (viewers only — host/admin drive the player)
   useEffect(() => {
     const video = videoRef.current;
-    if (!video || !videoState || isHost) return;
+    if (!video || !videoState || canControl) return;
 
     if (videoState.videoId !== lastVideoIdRef.current) {
       lastVideoIdRef.current = videoState.videoId;
@@ -99,12 +142,12 @@ export function SyncedVideoPlayer({
     } else if (!videoState.isPlaying && !video.paused) {
       video.pause();
     }
-  }, [videoState, isHost]);
+  }, [videoState, canControl]);
 
-  // Host: broadcast events on play/pause/seek/timeupdate
+  // Host/admin: broadcast events on play/pause/seek/timeupdate
   useEffect(() => {
     const video = videoRef.current;
-    if (!video || !isHost) return;
+    if (!video || !canControl) return;
 
     const onPlay = () =>
       throttledSync({ isPlaying: true, currentTime: video.currentTime });
@@ -138,7 +181,7 @@ export function SyncedVideoPlayer({
       video.removeEventListener("ended", onEnded);
       video.removeEventListener("timeupdate", onTimeUpdate);
     };
-  }, [isHost, videoState?.videoId, throttledSync, onVideoEnd]);
+  }, [canControl, videoState?.videoId, throttledSync, onVideoEnd]);
 
   // Drive UI state from video element events
   useEffect(() => {
@@ -204,16 +247,16 @@ export function SyncedVideoPlayer({
 
   // ── Control handlers ────────────────────────────────────────────────────
   const handleTogglePlay = useCallback(() => {
-    if (!isHost) return;
+    if (!canControl) return;
     const video = videoRef.current;
     if (!video) return;
     if (video.paused) video.play().catch(() => {});
     else video.pause();
-  }, [isHost]);
+  }, [canControl]);
 
   const handleSkip = useCallback(
     (seconds: number) => {
-      if (!isHost) return;
+      if (!canControl) return;
       const video = videoRef.current;
       if (!video) return;
       video.currentTime = Math.max(
@@ -221,7 +264,7 @@ export function SyncedVideoPlayer({
         Math.min(video.currentTime + seconds, video.duration)
       );
     },
-    [isHost]
+    [canControl]
   );
 
   const getProgressTime = useCallback(
@@ -237,25 +280,25 @@ export function SyncedVideoPlayer({
 
   const handleProgressPointerDown = useCallback(
     (e: React.PointerEvent<HTMLDivElement>) => {
-      if (!isHost) return;
+      if (!canControl) return;
       e.currentTarget.setPointerCapture(e.pointerId);
       setIsProgressDragging(true);
       setDragTime(getProgressTime(e));
     },
-    [isHost, getProgressTime]
+    [canControl, getProgressTime]
   );
 
   const handleProgressPointerMove = useCallback(
     (e: React.PointerEvent<HTMLDivElement>) => {
-      if (!isHost || !isProgressDragging) return;
+      if (!canControl || !isProgressDragging) return;
       setDragTime(getProgressTime(e));
     },
-    [isHost, isProgressDragging, getProgressTime]
+    [canControl, isProgressDragging, getProgressTime]
   );
 
   const handleProgressPointerUp = useCallback(
     (e: React.PointerEvent<HTMLDivElement>) => {
-      if (!isHost) return;
+      if (!canControl) return;
       setIsProgressDragging(false);
       const time = getProgressTime(e);
       setDragTime(null);
@@ -263,7 +306,7 @@ export function SyncedVideoPlayer({
         videoRef.current.currentTime = time;
       }
     },
-    [isHost, getProgressTime]
+    [canControl, getProgressTime]
   );
 
   const handleToggleMute = useCallback(() => {
@@ -303,7 +346,7 @@ export function SyncedVideoPlayer({
           <div className="w-16 h-16 rounded-full bg-gray-800 border border-white/10 flex items-center justify-center mx-auto mb-4">
             <Clock className="w-8 h-8 text-gray-500 animate-pulse" />
           </div>
-          {isHost ? (
+          {canControl ? (
             <div className="space-y-2">
               <p className="text-white font-semibold">Queue is empty</p>
               <p className="text-gray-400 text-sm">
@@ -356,7 +399,7 @@ export function SyncedVideoPlayer({
           <div
             ref={progressBarRef}
             className={`relative w-full h-1.5 bg-white/30 rounded-full group/progress transition-all duration-150 ${
-              isHost
+              canControl
                 ? "cursor-pointer hover:h-2.5"
                 : "cursor-default"
             } ${isProgressDragging ? "h-2.5" : ""}`}
@@ -375,7 +418,7 @@ export function SyncedVideoPlayer({
               className="absolute h-full bg-gradient-to-r from-purple-500 to-pink-500 rounded-full"
               style={{ width: `${progressPercent}%` }}
             >
-              {isHost && (
+              {canControl && (
                 <div
                   className={`absolute right-0 top-1/2 -translate-y-1/2 w-3.5 h-3.5 bg-white rounded-full transition-opacity ${
                     isProgressDragging
@@ -395,14 +438,14 @@ export function SyncedVideoPlayer({
               <button
                 onClick={handleTogglePlay}
                 title={
-                  isHost
+                  canControl
                     ? isPlaying
                       ? "Pause (Space)"
                       : "Play (Space)"
                     : "Host controls playback"
                 }
                 className={`p-1.5 transition-colors ${
-                  isHost
+                  canControl
                     ? "text-white hover:text-purple-400"
                     : "text-white/40 cursor-not-allowed"
                 }`}
@@ -414,8 +457,8 @@ export function SyncedVideoPlayer({
                 )}
               </button>
 
-              {/* Skip –10 / +10 (host only) */}
-              {isHost && (
+              {/* Skip –10 / +10 (host/admin only) */}
+              {canControl && (
                 <>
                   <button
                     onClick={() => handleSkip(-10)}
@@ -466,8 +509,8 @@ export function SyncedVideoPlayer({
                 {formatTime(currentTime)} / {formatTime(duration)}
               </span>
 
-              {/* Guest lock badge */}
-              {!isHost && (
+              {/* Viewer lock badge */}
+              {!canControl && (
                 <div className="flex items-center gap-1 text-gray-400 text-[11px] ml-2">
                   <Lock className="w-3 h-3 shrink-0" />
                   <span className="hidden sm:inline">Host controls playback</span>
