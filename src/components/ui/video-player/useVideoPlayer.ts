@@ -9,6 +9,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { auditLogControllerCreateLog } from "@/apis/api/auditLogs";
 import { useVideoStore } from "@/store";
 import { getAccessTokenInMemory } from "@/lib/request";
+import { env } from "@/env";
 
 interface UseVideoPlayerProps {
   src: string;
@@ -175,16 +176,17 @@ export function useVideoPlayer({
           shakaPlayer = player;
 
           // Configure ClearKey DRM
-          const apiBaseUrl = process.env.NEXT_PUBLIC_API_URL || "";
+          const apiBaseUrl = env.NEXT_PUBLIC_API_URL;
+          const baseUrl = apiBaseUrl.endsWith("/") ? apiBaseUrl : `${apiBaseUrl}/`;
           player.configure({
             drm: {
               servers: {
-                "org.w3.clearkey": `${apiBaseUrl}/api/v1/drm/license/clearkey`,
+                "org.w3.clearkey": `${baseUrl}api/v1/drm/license/clearkey`,
               },
             },
           });
 
-          // Custom license request filter to add JWT + contentId
+          // Custom license request filter to add JWT + videoId + Content-Type
           player.getNetworkingEngine()!.registerRequestFilter((requestType: any, request: any) => {
             if (requestType === shaka.net.NetworkingEngine.RequestType.LICENSE) {
               const token = getAccessTokenInMemory();
@@ -192,10 +194,13 @@ export function useVideoPlayer({
                 request.headers["Authorization"] = `Bearer ${token}`;
               }
               
+              // Force Content-Type to JSON so NestJS ValidationPipe parses the request body correctly
+              request.headers["Content-Type"] = "application/json";
+              
               if (request.body) {
                 try {
                   const body = JSON.parse(new TextDecoder().decode(request.body));
-                  body.contentId = videoId || episodeId || "";
+                  body.videoId = videoId || episodeId || "";
                   request.body = new TextEncoder().encode(JSON.stringify(body));
                 } catch (e) {
                   console.error("Failed to parse license request body", e);
@@ -207,9 +212,15 @@ export function useVideoPlayer({
           // Listen for player errors
           player.addEventListener("error", (event: any) => {
             const error = event.detail;
-            console.error("Shaka Player error:", error);
+            console.error("Shaka Player error details:", {
+              code: error?.code,
+              category: error?.category,
+              severity: error?.severity,
+              message: error?.message,
+              data: error?.data,
+            });
             if (active) {
-              setError(`DRM Playback error: ${error.message || "License validation failed (403)"}`);
+              setError(`DRM Playback error: ${error?.message || `Code ${error?.code} (License validation failed)`}`);
             }
           });
 
@@ -402,7 +413,8 @@ export function useVideoPlayer({
         clearInterval(updateIntervalRef.current);
       }
     };
-  }, [src, type, autoPlay, initialTime, retryTrigger, drmKeyId]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [src, type, autoPlay, retryTrigger, drmKeyId]);
 
   // Video event handlers
   useEffect(() => {
