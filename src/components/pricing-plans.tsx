@@ -1,97 +1,146 @@
 "use client";
 
+import { useState } from "react";
+import { useUIStore } from "@/store";
+import { isAuthenticated } from "@/lib/auth";
+import { paymentControllerInitiateSubscription } from "@/apis/api/payments";
+import { toast } from "sonner";
+import { Loader2 } from "lucide-react";
+
 export function PricingPlans() {
+  const [loadingPlan, setLoadingPlan] = useState<string | null>(null);
+  const openLoginModal = useUIStore((s) => s.openLoginModal);
+
   const plans = [
     {
-      name: "FREE PLAN",
-      price: "Free.",
+      name: "Premium Plan",
+      planType: "premium" as const,
+      price: "$9.99",
+      duration: "/ 2 Months",
       features: [
-        "Get unlimited access to thousands of shows and movies with limited ads",
-        "Watch on your favorite devices",
-        "Switch plans or cancel anytime",
-        "Download from thousands of titles to watch offline",
+        "Unlimited access to thousands of movies and TV shows",
+        "Watch seamlessly on all your favorite devices",
+        "Cancel or switch plans anytime you want",
+        "HD streaming with fast playback experience",
       ],
-      buttonText: "Choose Plan",
-      highlighted: false,
-    },
-    {
-      name: "DIAMOND PLAN",
-      price: "$9.99 per Month.",
-      features: [
-        "Get unlimited access to thousands of shows and movies with limited ads",
-        "Watch on your favorite devices",
-        "Switch plans or cancel anytime",
-        "Download from thousands of titles to watch offline",
-      ],
-      buttonText: "Choose Plan",
+      buttonText: "Get Started",
       highlighted: true,
-    },
-    {
-      name: "PLATINUM PLAN",
-      price: "$39.99 every 2 Months.",
-      features: [
-        "Get unlimited access to thousands of shows and movies with limited ads",
-        "Watch on your favorite devices",
-        "Switch plans or cancel anytime",
-        "Download from thousands of titles to watch offline",
-      ],
-      buttonText: "Choose Plan",
-      highlighted: false,
     },
   ];
 
-  return (
-    <section className="px-6 py-16 bg-slate-900/50">
-      <div className="max-w-6xl mx-auto text-center">
-        <h2 className="text-white text-4xl font-bold mb-4">
-          Choose The Plan That
-          <br />
-          Suits For You
-        </h2>
-        <p className="text-gray-400 text-lg mb-12 max-w-2xl mx-auto">
-          We present 3 packages that you can choose to start watching various
-          movies you like at low prices and according to your needs
-        </p>
+  const handleSubscribe = async (planType: "basic" | "premium") => {
+    if (!isAuthenticated()) {
+      openLoginModal();
+      return;
+    }
 
-        <div className="grid md:grid-cols-3 gap-8 items-stretch">
+    try {
+      setLoadingPlan(planType);
+      const res = await paymentControllerInitiateSubscription({ plan: planType });
+      const paymentUrl = res.data?.data?.paymentUrl;
+      console.log(paymentUrl);
+      if (paymentUrl) {
+        window.location.href = paymentUrl;
+      } else {
+        toast.error("Failed to initiate payment. Please try again.");
+      }
+    } catch (err) {
+      console.error("Subscription payment error:", err);
+      toast.error("Failed to initiate subscription payment.");
+    } finally {
+      setLoadingPlan(null);
+    }
+  };
+
+  return (
+    <section className="relative overflow-hidden bg-[#020617] px-6 py-24">
+      {/* Background Glow */}
+      <div className="absolute top-0 left-1/2 h-[400px] w-[400px] -translate-x-1/2 rounded-full bg-purple-600/20 blur-3xl" />
+
+      <div className="relative mx-auto max-w-6xl">
+        {/* Header */}
+        <div className="mb-16 text-center">
+          <span className="mb-4 inline-block rounded-full border border-purple-500/30 bg-purple-500/10 px-4 py-1 text-sm font-medium text-purple-300">
+            Pricing Plans
+          </span>
+
+          <h2 className="text-4xl font-bold leading-tight text-white md:text-6xl">
+            Choose Your
+            <span className="bg-gradient-to-r from-purple-400 to-blue-500 bg-clip-text text-transparent">
+              {" "}
+              Perfect Plan
+            </span>
+          </h2>
+
+          <p className="mx-auto mt-6 max-w-2xl text-base leading-relaxed text-slate-400 md:text-lg">
+            Enjoy premium entertainment with unlimited access to movies,
+            series, and exclusive content — all in one affordable plan.
+          </p>
+        </div>
+
+        {/* Pricing Card */}
+        <div className="mx-auto max-w-md">
           {plans.map((plan, index) => (
             <div
               key={index}
-              className={`p-8 rounded-2xl border flex flex-col h-full ${
-                plan.highlighted
-                  ? "bg-slate-800 border-slate-700 shadow-xl shadow-purple-500/10"
-                  : "bg-slate-800/30 border-slate-700/50"
-              }`}
+              className="group relative overflow-hidden rounded-3xl border border-white/10 bg-white/5 p-8 backdrop-blur-xl transition-all duration-500 hover:-translate-y-2 hover:border-purple-500/40 hover:shadow-2xl hover:shadow-purple-500/20"
             >
-              <div className="mb-6 min-h-[100px] flex flex-col justify-start">
-                <p className="text-gray-400 text-sm font-medium mb-2">
-                  {plan.name}
-                </p>
-                <h3 className="text-purple-400 text-3xl font-bold">
-                  {plan.price}
-                </h3>
+              {/* Glow Effect */}
+              <div className="absolute inset-0 bg-gradient-to-br from-purple-500/10 via-transparent to-blue-500/10 opacity-0 transition-opacity duration-500 group-hover:opacity-100" />
+
+              {/* Popular Badge */}
+              <div className="absolute right-6 top-6 rounded-full bg-gradient-to-r from-purple-500 to-blue-500 px-3 py-1 text-xs font-semibold text-white shadow-lg">
+                MOST POPULAR
               </div>
 
-              <ul className="space-y-4 mb-8 text-left flex-grow min-h-[240px]">
-                {plan.features.map((feature, featureIndex) => (
-                  <li key={featureIndex} className="flex items-start gap-3">
-                    <div className="w-2 h-2 bg-purple-400 rounded-full mt-2 flex-shrink-0"></div>
-                    <span className="text-gray-300 text-sm leading-relaxed">
-                      {feature}
-                    </span>
-                  </li>
-                ))}
-              </ul>
+              <div className="relative z-10">
+                {/* Plan Info */}
+                <div className="mb-8">
+                  <p className="mb-3 text-sm font-semibold uppercase tracking-[0.2em] text-purple-300">
+                    {plan.name}
+                  </p>
 
-              <button
-                className={`w-full py-3 px-6 rounded-lg font-semibold transition-all duration-300 mt-auto ${
-                  plan.highlighted
-                    ? "bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white shadow-lg shadow-purple-500/30"
-                    : "border border-purple-400 text-purple-400 hover:bg-purple-400 hover:text-white"
-                }`}
-              >
-                {plan.buttonText}
-              </button>
+                  <div className="flex items-end gap-2">
+                    <h3 className="text-5xl font-bold text-white">
+                      {plan.price}
+                    </h3>
+
+                    <span className="mb-1 text-slate-400">
+                      {plan.duration}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Features */}
+                <ul className="mb-10 space-y-5">
+                  {plan.features.map((feature, featureIndex) => (
+                    <li
+                      key={featureIndex}
+                      className="flex items-start gap-4"
+                    >
+                      <div className="mt-1 flex h-6 w-6 items-center justify-center rounded-full bg-gradient-to-r from-purple-500 to-blue-500 text-sm text-white">
+                        ✓
+                      </div>
+
+                      <span className="text-sm leading-relaxed text-slate-300">
+                        {feature}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+
+                {/* Button */}
+                <button
+                  disabled={loadingPlan !== null}
+                  onClick={() => handleSubscribe(plan.planType)}
+                  className="w-full rounded-xl bg-gradient-to-r from-purple-600 to-blue-600 px-6 py-4 text-sm font-semibold text-white transition-all duration-300 hover:scale-[1.02] hover:shadow-xl hover:shadow-purple-500/30 flex items-center justify-center gap-2 disabled:opacity-50"
+                >
+                  {loadingPlan === plan.planType && (
+                    <Loader2 className="w-4 h-4 animate-spin text-white" />
+                  )}
+                  <span>{plan.buttonText}</span>
+                </button>
+              </div>
             </div>
           ))}
         </div>

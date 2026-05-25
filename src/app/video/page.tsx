@@ -11,7 +11,9 @@ import { videosControllerGetVideoById } from "@/apis/api/videos";
 function VideoContent() {
   const searchParams = useSearchParams();
   const videoId = searchParams.get("videoId") || "";
-  const { videoContent } = useVideoAccess("");
+  const { videoContent, isLoading: isAccessLoading } = useVideoAccess(
+    videoId ? { videoId } : ""
+  );
   const [videoDetails, setVideoDetails] = useState<any>(null);
 
   useEffect(() => {
@@ -24,15 +26,32 @@ function VideoContent() {
     }
   }, [videoId]);
 
+  if (isAccessLoading) {
+    return (
+      <div className="w-full h-screen bg-black flex items-center justify-center">
+        <div className="text-white text-lg flex items-center gap-2">
+          <span className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></span>
+          Loading secure video...
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="w-full h-screen bg-black">
-      {videoContent && videoDetails && (
+      {videoContent && videoDetails ? (
         <VideoPlayerComponent
-          {...videoContent}
+          src={videoContent.src}
+          type={videoContent.type}
+          drmKeyId={videoContent.drmKeyId}
           videoId={videoId}
           sprites={videoDetails.sprites}
           vttFiles={videoDetails.vttFiles}
         />
+      ) : (
+        <div className="w-full h-screen bg-black flex items-center justify-center">
+          <div className="text-red-500 text-lg">Failed to retrieve video details or stream.</div>
+        </div>
       )}
     </div>
   );

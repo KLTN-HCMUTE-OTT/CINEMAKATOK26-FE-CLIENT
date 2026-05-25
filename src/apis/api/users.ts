@@ -144,6 +144,16 @@ export async function userControllerUnbanUser(
   );
 }
 
+/** Batch fetch users by IDs (admin) POST /api/v1/users/batch */
+export async function userControllerGetUsersByIds(options?: {
+  [key: string]: any;
+}) {
+  return request<any>("/api/v1/users/batch", {
+    method: "POST",
+    ...(options || {}),
+  });
+}
+
 /** Get user profile Get the current user profile information GET /api/v1/users/profile */
 export async function userControllerGetProfile(options?: {
   [key: string]: any;

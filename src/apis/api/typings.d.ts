@@ -55,6 +55,18 @@ declare namespace API {
     id: string;
   };
 
+  type AdminBanUserDto = {
+    /** Duration in seconds (omit for permanent ban) */
+    durationSec?: number;
+    /** Reason for the ban */
+    reason?: string;
+  };
+
+  type AdminCloseRoomDto = {
+    /** Reason for closing the room */
+    reason?: string;
+  };
+
   type AnalyticsControllerGetCategoriesStatsParams = {
     search?: string;
     sort?: string;
@@ -262,6 +274,21 @@ declare namespace API {
     confirmPassword: string;
   };
 
+  type CheckSubscribeDto = {
+    /** isActive */
+    isActive: boolean;
+    /** plan */
+    plan: string;
+    /** expiresAt */
+    expiresAt: string;
+  };
+
+  type CheckSubscribeDtoResponseDto = {
+    statusCode: number;
+    message: string;
+    data: CheckSubscribeDto;
+  };
+
   type ChurnFeatureDto = {
     userId: string;
     accountAgeDays: number;
@@ -296,6 +323,27 @@ declare namespace API {
     month: string;
     rate: number;
     trend: "up" | "down";
+  };
+
+  type ClearKeyKeyDto = {
+    /** JSON Web Key type */
+    kty: string;
+    /** Base64url encoded Key ID */
+    kid: string;
+    /** Base64url encoded content decryption key */
+    k: string;
+  };
+
+  type ClearKeyLicenseRequestDto = {
+    /** Array of Key IDs (base64url or hex) from DASH manifest */
+    kids: string[];
+    /** Content ID */
+    contentId: string;
+  };
+
+  type ClearKeyLicenseResponseDto = {
+    keys: ClearKeyKeyDto[];
+    type: string;
   };
 
   type ContentDto = {
@@ -336,6 +384,8 @@ declare namespace API {
     viewCount?: number;
     /** IMDB rating of the content */
     imdbRating?: number;
+    /** Access tier of the content */
+    accessTier?: "BASIC" | "PREMIUM";
     /** Categories of the content */
     categories: CategoryDto[];
     /** Tags of the content */
@@ -443,6 +493,8 @@ declare namespace API {
     avgRating?: number;
     /** IMDB rating of the content */
     imdbRating?: number;
+    /** Access tier of the content */
+    accessTier?: "BASIC" | "PREMIUM";
     /** Categories of the content */
     categories: UpdateCategoryDto[];
     /** Tags of the content */
@@ -817,6 +869,60 @@ declare namespace API {
     email: string;
   };
 
+  type InformationSubscribeDto = {
+    /** Unique identifier of the entity */
+    id: string;
+    /** Creation date of the entity */
+    createdAt: string;
+    /** Last update date of the entity */
+    updatedAt: string;
+    /** userId */
+    userId: string;
+    /** planId */
+    planId: string;
+    status: "active" | "expired" | "cancelled";
+    /** plan name */
+    planName: string;
+    /** startsAt */
+    startsAt: string;
+    /** expiresAt */
+    expiresAt: string;
+    /** autoRenew */
+    autoRenew: boolean;
+    /** paymentId */
+    paymentId: Record<string, any>;
+  };
+
+  type InformationSubscribeDtoResponseDto = {
+    statusCode: number;
+    message: string;
+    data: InformationSubscribeDto;
+  };
+
+  type InitiatePaymentDto = {
+    /** Subscription plan to purchase */
+    plan: "basic" | "premium";
+  };
+
+  type InitiatePaymentResponseDto = {
+    /** VNPAY checkout URL — redirect the user to this URL to complete payment */
+    paymentUrl: string;
+    /** Internal order code for tracking this payment */
+    orderCode: string;
+    /** Amount to be charged in VND (smallest unit) */
+    amount: number;
+    /** Subscription plan being purchased */
+    plan: "basic" | "premium";
+    /** Idempotency key used to deduplicate this request */
+    idempotencyKey: string;
+  };
+
+  type InitiatePaymentResponseDtoResponseDto = {
+    statusCode: number;
+    message: string;
+    data: InitiatePaymentResponseDto;
+  };
+
   type InviteLookupResponse = {
     roomId: string;
     title: string;
@@ -1031,6 +1137,75 @@ declare namespace API {
     itemsPerPage: number;
     totalPages: number;
     currentPage: number;
+  };
+
+  type PaymentControllerGetByIdParams = {
+    id: string;
+  };
+
+  type PaymentControllerGetHistoryParams = {
+    /** Items per page (max 100) */
+    limit?: number;
+    /** Page number (1-indexed) */
+    page?: number;
+  };
+
+  type PaymentDetailDto = {
+    /** Payment UUID */
+    id: string;
+    /** Owner user UUID */
+    userId: string;
+    /** Linked subscription UUID (populated after saga completes) */
+    subscriptionId?: string;
+    /** Internal order code sent to VNPAY */
+    orderCode: string;
+    /** VNPAY transaction number (set after payment is confirmed) */
+    vnpayTxnNo?: string;
+    /** Charge amount in VND */
+    amount: number;
+    /** Currency code */
+    currency: string;
+    /** Subscription plan */
+    plan: "basic" | "premium";
+    /** Whether this is a new purchase, upgrade, or renewal */
+    paymentType: "new" | "upgrade" | "renewal";
+    /** Subscription duration purchased (days) */
+    durationDays: number;
+    /** Current payment lifecycle status */
+    status:
+      | "pending"
+      | "processing"
+      | "completed"
+      | "failed"
+      | "expired"
+      | "refunded";
+    /** VNPAY response code (e.g. "00" = success) */
+    vnpayResponseCode?: string;
+    /** VNPAY response message */
+    vnpayMessage?: string;
+    /** Bank code used for payment */
+    bankCode?: string;
+    /** Card type used (ATM or VISA) */
+    cardType?: string;
+    /** Timestamp when VNPAY confirmed the payment */
+    payDate?: string;
+    /** Record creation timestamp */
+    createdAt: string;
+    /** Record last-update timestamp */
+    updatedAt: string;
+  };
+
+  type PaymentDetailDtoPaginatedResponseDto = {
+    statusCode: number;
+    message: string;
+    data: PaymentDetailDto[];
+    meta: PaginationMeta;
+  };
+
+  type PaymentDetailDtoResponseDto = {
+    statusCode: number;
+    message: string;
+    data: PaymentDetailDto;
   };
 
   type ProfileResponse = {
@@ -1429,8 +1604,16 @@ declare namespace API {
     accessToken: string;
   };
 
+  type StreamingControllerGetDrmKeyInfoParams = {
+    videoId: string;
+  };
+
   type StreamingControllerGetFileAccessParams = {
     s3Key: string;
+  };
+
+  type StreamingControllerGetManifestUrlParams = {
+    videoId: string;
   };
 
   type TagDto = {
@@ -1693,6 +1876,8 @@ declare namespace API {
     viewCount?: number;
     /** IMDB rating of the content */
     imdbRating?: number;
+    /** Access tier of the content */
+    accessTier?: "BASIC" | "PREMIUM";
     /** Categories of the content */
     categories: UpdateCategoryDto[];
     /** Tags of the content */
@@ -2059,6 +2244,10 @@ declare namespace API {
     id: string;
   };
 
+  type VideosControllerGetVideoParentContentParams = {
+    id: string;
+  };
+
   type VideosControllerGetVideosParams = {
     /** Search videos by title */
     search?: any;
@@ -2114,6 +2303,13 @@ declare namespace API {
     meta: PaginationMeta;
   };
 
+  type VnpayIpnResponseDto = {
+    /** VNPAY result code — "00" means success, everything else is an error */
+    RspCode: string;
+    /** Human-readable result message */
+    Message: string;
+  };
+
   type WatchListControllerCheckInWatchListByMovieIdParams = {
     /** Movie ID or TVSeries ID to check */
     movieId: string;
@@ -2143,6 +2339,36 @@ declare namespace API {
     contentId: string;
   };
 
+  type WatchPartyControllerAdminBanUserParams = {
+    userId: string;
+  };
+
+  type WatchPartyControllerAdminCloseRoomParams = {
+    id: string;
+  };
+
+  type WatchPartyControllerAdminGetRoomDetailsParams = {
+    id: string;
+  };
+
+  type WatchPartyControllerAdminKickMemberParams = {
+    id: string;
+    userId: string;
+  };
+
+  type WatchPartyControllerAdminListRoomsParams = {
+    limit?: number;
+    offset?: number;
+    /** Search by title or hostId */
+    search?: string;
+    /** Filter by videoId */
+    videoId?: string;
+  };
+
+  type WatchPartyControllerAdminUnbanUserParams = {
+    userId: string;
+  };
+
   type WatchPartyControllerCloseRoomParams = {
     id: string;
   };
@@ -2157,6 +2383,18 @@ declare namespace API {
 
   type WatchPartyControllerLookupInviteParams = {
     code: string;
+  };
+
+  type WatchPartyStatsResponse = {
+    totalActiveRooms: number;
+    totalPublicRooms: number;
+    totalMembers: number;
+  };
+
+  type WatchPartyStatsResponseResponseDto = {
+    statusCode: number;
+    message: string;
+    data: WatchPartyStatsResponse;
   };
 
   type WatchProgressControllerDeleteWatchProgressParams = {

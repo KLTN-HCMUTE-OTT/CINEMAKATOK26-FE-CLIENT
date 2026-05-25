@@ -4,11 +4,12 @@ import { FavoriteMovies } from "@/components/profile/favorite-movies";
 import { HistorySection } from "@/components/profile/history-section";
 import { WatchlistSection } from "@/components/profile/watchlist-section";
 import { ProfileInfoSection } from "@/components/profile/profile-info-section";
+import { BillingSection } from "@/components/profile/billing-section";
 import { notFound } from "next/navigation";
 import { Header } from "@/components/header";
 import { Footer } from "@/components/footer";
 
-const validTabs = ["profile", "favorites", "history", "watchlist"];
+const validTabs = ["profile", "favorites", "history", "watchlist", "billing"];
 
 interface ProfilePageProps {
   params: Promise<{
@@ -42,6 +43,7 @@ export default async function ProfilePage({ params }: ProfilePageProps) {
           {currentTab === "favorites" && <FavoriteMovies />}
           {currentTab === "history" && <HistorySection />}
           {currentTab === "watchlist" && <WatchlistSection />}
+          {currentTab === "billing" && <BillingSection />}
         </div>
       </div>
       <Footer />
@@ -66,6 +68,7 @@ export async function generateMetadata({ params }: ProfilePageProps) {
     favorites: "My Favorites",
     history: "Watch History",
     watchlist: "My Watchlist",
+    billing: "Billing History",
   };
 
   return {

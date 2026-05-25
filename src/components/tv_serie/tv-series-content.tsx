@@ -5,8 +5,9 @@ import { Header } from "../header";
 import { RankList } from "../rank-list";
 import { TVSeriesVideoPlayerComponent } from "../ui/video-player/tv-series-player";
 import { EpisodeCardList } from "./card/episode-card";
+import useVideoAccess from "@/hooks/use-video-access";
 import { useWatchProgress } from "@/hooks/use-watch-progress";
-import { videoControllerFindOne } from "@/apis/api/video";
+import { videosControllerGetVideoById } from "@/apis/api/videos";
 import { MoreTVSeriesSection } from "./section/more-tv-series-section";
 import { DetailInfoSection } from "./section/detail-info-section";
 import Link from "next/link";
@@ -40,13 +41,19 @@ export default function TVSeriesVideoContent({
     episodeId: episode?.id,
   });
 
+  const { videoContent, isLoading: isAccessLoading } = useVideoAccess(
+    episode?.video.id
+      ? { videoId: episode.video.id }
+      : { s3KeyStream: episode?.video.videoUrl || "" }
+  );
+
   useEffect(() => {
     if (episode?.video.id) {
-      videoControllerFindOne({ id: episode?.video.id })
-        .then((res) => {
+      videosControllerGetVideoById({ id: episode.video.id })
+        .then((res: any) => {
           setVideoDetails(res.data.data);
         })
-        .catch((err) => console.error("Failed to fetch video details", err));
+        .catch((err: any) => console.error("Failed to fetch video details", err));
     }
   }, [episode?.video.id]);
 
@@ -180,27 +187,42 @@ export default function TVSeriesVideoContent({
           {/* Sidebar trái */}
           <div className="lg:col-span-7">
             {/* Nội dung chính TV series bao gom video player detail more like this reviews */}
-            <TVSeriesVideoPlayerComponent
-              src={getS3Url(episode?.video.videoUrl || "")}
-              poster={episode?.video.thumbnailUrl || ""}
-              autoPlay={true}
-              videoId={episode?.video.id}
-              episodeId={episode?.id}
-              initialTime={skipInitialTime ? 0 : resumeData?.watchedDuration}
-              sprites={videoDetails?.sprites}
-              vttFiles={videoDetails?.vttFiles}
-              onTimeUpdate={(currentTime) => {
-                // Callback to update duration when available
-              }}
-              episodeIndex={episode?.episodeNumber}
-              totalEpisodes={
-                tvSeries?.seasons.find((season) =>
-                  season.episodes.some((ep) => ep.id === episodeId),
-                )?.episodes.length || 0
-              }
-              onPrevEpisode={handlePrevEpisode}
-              onNextEpisode={handleNextEpisode}
-            />
+            {isAccessLoading ? (
+              <div className="w-full aspect-video bg-black flex items-center justify-center rounded-2xl overflow-hidden shadow-2xl border border-gray-800">
+                <div className="text-white text-lg flex items-center gap-2">
+                  <span className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></span>
+                  Loading secure player...
+                </div>
+              </div>
+            ) : videoContent ? (
+              <TVSeriesVideoPlayerComponent
+                src={videoContent.src}
+                type={videoContent.type}
+                drmKeyId={videoContent.drmKeyId}
+                poster={episode?.video.thumbnailUrl || ""}
+                autoPlay={true}
+                videoId={episode?.video.id}
+                episodeId={episode?.id}
+                initialTime={skipInitialTime ? 0 : resumeData?.watchedDuration}
+                sprites={videoDetails?.sprites}
+                vttFiles={videoDetails?.vttFiles}
+                onTimeUpdate={(currentTime) => {
+                  // Callback to update duration when available
+                }}
+                episodeIndex={episode?.episodeNumber}
+                totalEpisodes={
+                  tvSeries?.seasons.find((season) =>
+                    season.episodes.some((ep) => ep.id === episodeId),
+                  )?.episodes.length || 0
+                }
+                onPrevEpisode={handlePrevEpisode}
+                onNextEpisode={handleNextEpisode}
+              />
+            ) : (
+              <div className="w-full aspect-video bg-black flex items-center justify-center rounded-2xl overflow-hidden border border-gray-800">
+                <div className="text-red-500 text-lg font-semibold">Failed to retrieve video stream.</div>
+              </div>
+            )}
             <nav
               aria-label="breadcrumb"
               className="text-sm text-gray-400 mt-4 mb-6"
