@@ -20,6 +20,7 @@ export interface TVSeriesVideoPlayerProps {
   totalEpisodes?: number;
   onPrevEpisode?: () => void;
   onNextEpisode?: () => void;
+  drmKeyId?: string | null;
 }
 
 export const TVSeriesVideoPlayerComponent = ({
@@ -39,6 +40,7 @@ export const TVSeriesVideoPlayerComponent = ({
   totalEpisodes,
   onPrevEpisode,
   onNextEpisode,
+  drmKeyId,
 }: TVSeriesVideoPlayerProps) => {
   return (
     <div className="w-full h-full">
@@ -61,6 +63,7 @@ export const TVSeriesVideoPlayerComponent = ({
         totalEpisodesProp={totalEpisodes}
         onPrevEpisode={onPrevEpisode}
         onNextEpisode={onNextEpisode}
+        drmKeyId={drmKeyId}
       />
     </div>
   );

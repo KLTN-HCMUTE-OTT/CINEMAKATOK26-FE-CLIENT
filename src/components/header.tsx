@@ -2,7 +2,7 @@
 
 import { useState, useRef, useCallback, useEffect } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 import { Search, Globe, ChevronDown, Play, User, Menu, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { MegaMenu } from "@/components/mega-menu";
@@ -39,6 +39,20 @@ export function Header({ variant = "fixed" }: HeaderProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [isMounted, setIsMounted] = useState(false);
   const router = useRouter();
+  const pathname = usePathname();
+
+  const handleSubscribeClick = () => {
+    if (pathname === "/") {
+      const element = document.getElementById("pricing");
+      if (element) {
+        element.scrollIntoView({ behavior: "smooth" });
+        setIsMobileMenuOpen(false);
+        return;
+      }
+    }
+    router.push("/#pricing");
+    setIsMobileMenuOpen(false);
+  };
 
   const isLoginModalOpen = useUIStore((s) => s.loginModalOpen);
   const isRegisterModalOpen = useUIStore((s) => s.registerModalOpen);
@@ -310,7 +324,10 @@ export function Header({ variant = "fixed" }: HeaderProps) {
               )}
 
               {/* Subscribe - Hidden on mobile */}
-              <Button className="hidden sm:flex bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white px-4 lg:px-6 py-2 rounded-full focus:outline-none focus:ring-2 focus:ring-purple-500/50 text-sm">
+              <Button
+                onClick={handleSubscribeClick}
+                className="hidden sm:flex bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white px-4 lg:px-6 py-2 rounded-full focus:outline-none focus:ring-2 focus:ring-purple-500/50 text-sm"
+              >
                 Subscribe
               </Button>
 
@@ -378,7 +395,10 @@ export function Header({ variant = "fixed" }: HeaderProps) {
 
           {/* Mobile Subscribe Button */}
           <div className="sm:hidden px-4">
-            <Button className="w-full bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white py-2 rounded-full">
+            <Button
+              onClick={handleSubscribeClick}
+              className="w-full bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white py-2 rounded-full"
+            >
               Subscribe
             </Button>
           </div>

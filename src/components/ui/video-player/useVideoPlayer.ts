@@ -8,6 +8,7 @@ import { useWatchProgress } from "@/hooks/use-watch-progress";
 import { useAuth } from "@/hooks/use-auth";
 import { auditLogControllerCreateLog } from "@/apis/api/auditLogs";
 import { useVideoStore } from "@/store";
+import { getAccessTokenInMemory } from "@/lib/request";
 
 interface UseVideoPlayerProps {
   src: string;
@@ -24,6 +25,7 @@ interface UseVideoPlayerProps {
   totalEpisodes?: number;
   onPrevEpisode?: () => void;
   onNextEpisode?: () => void;
+  drmKeyId?: string | null;
 }
 
 export function useVideoPlayer({
@@ -40,12 +42,14 @@ export function useVideoPlayer({
   totalEpisodes,
   onPrevEpisode,
   onNextEpisode,
+  drmKeyId,
 }: UseVideoPlayerProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const progressBarRef = useRef<HTMLDivElement>(null);
   const volumeBarRef = useRef<HTMLDivElement>(null);
   const hlsRef = useRef<Hls | null>(null);
+  const shakaPlayerRef = useRef<any>(null);
   const controlsTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const [isPlaying, setIsPlaying] = useState(false);
@@ -56,7 +60,7 @@ export function useVideoPlayer({
   const [buffered, setBuffered] = useState(0);
   const [playbackRate, setPlaybackRate] = useState(1);
   const [availableQualities, setAvailableQualities] = useState<
-    Array<{ label: string; height: number; index: number }>
+    Array<{ label: string; height: number; index: number; track?: any }>
   >([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -73,6 +77,7 @@ export function useVideoPlayer({
   const wasPlayingBeforeDragRef = useRef(false);
   const [error, setError] = useState<string | null>(null);
   const [retryCount, setRetryCount] = useState(0);
+  const [retryTrigger, setRetryTrigger] = useState(0);
   const quality = useVideoStore((state) => state.quality);
   const volume = useVideoStore((state) => state.volume);
   const isMuted = useVideoStore((state) => state.isMuted);
@@ -102,6 +107,20 @@ export function useVideoPlayer({
   }, [isMuted, volume]);
 
   useEffect(() => {
+    if (shakaPlayerRef.current) {
+      const player = shakaPlayerRef.current;
+      if (quality === "auto") {
+        player.configure({ abr: { enabled: true } });
+      } else {
+        const selected = availableQualities.find((item) => item.label === quality);
+        if (selected && selected.track) {
+          player.configure({ abr: { enabled: false } });
+          player.selectVariantTrack(selected.track, /* clearBuffer = */ true);
+        }
+      }
+      return;
+    }
+
     if (!hlsRef.current || availableQualities.length === 0) return;
 
     if (quality === "auto") {
@@ -117,20 +136,147 @@ export function useVideoPlayer({
     }
   }, [availableQualities, quality]);
 
-  // Initialize HLS
+  // Initialize HLS / Shaka Player
   useEffect(() => {
     const video = videoRef.current;
     if (!video) return;
 
-    const initHls = () => {
-      if (Hls.isSupported() && type === "application/x-mpegURL") {
-        const hls = new Hls({
+    let active = true;
+    let shakaPlayer: any = null;
+    let hls: Hls | null = null;
+
+    const initPlayer = async () => {
+      setIsLoading(true);
+      setError(null);
+
+      // Detect DASH stream
+      const isDash = type === "application/dash+xml" || src?.includes(".mpd") || !!drmKeyId;
+
+      if (isDash) {
+        try {
+          const shaka = (await import("shaka-player/dist/shaka-player.compiled")).default;
+          
+          if (!active) return;
+
+          shaka.polyfill.installAll();
+          if (!shaka.Player.isBrowserSupported()) {
+            throw new Error("Browser not supported by Shaka Player");
+          }
+
+          const player = new shaka.Player();
+          await player.attach(video);
+          
+          if (!active) {
+            player.destroy();
+            return;
+          }
+
+          shakaPlayerRef.current = player;
+          shakaPlayer = player;
+
+          // Configure ClearKey DRM
+          const apiBaseUrl = process.env.NEXT_PUBLIC_API_URL || "";
+          player.configure({
+            drm: {
+              servers: {
+                "org.w3.clearkey": `${apiBaseUrl}/api/v1/drm/license/clearkey`,
+              },
+            },
+          });
+
+          // Custom license request filter to add JWT + contentId
+          player.getNetworkingEngine()!.registerRequestFilter((requestType: any, request: any) => {
+            if (requestType === shaka.net.NetworkingEngine.RequestType.LICENSE) {
+              const token = getAccessTokenInMemory();
+              if (token) {
+                request.headers["Authorization"] = `Bearer ${token}`;
+              }
+              
+              if (request.body) {
+                try {
+                  const body = JSON.parse(new TextDecoder().decode(request.body));
+                  body.contentId = videoId || episodeId || "";
+                  request.body = new TextEncoder().encode(JSON.stringify(body));
+                } catch (e) {
+                  console.error("Failed to parse license request body", e);
+                }
+              }
+            }
+          });
+
+          // Listen for player errors
+          player.addEventListener("error", (event: any) => {
+            const error = event.detail;
+            console.error("Shaka Player error:", error);
+            if (active) {
+              setError(`DRM Playback error: ${error.message || "License validation failed (403)"}`);
+            }
+          });
+
+          // Fetch tracks to populate available qualities
+          player.addEventListener("trackschanged", () => {
+            const tracks = player.getVariantTracks();
+            if (tracks && tracks.length > 0) {
+              const qualities = tracks
+                .map((track: any, index: number) => {
+                  const height = track.height || 0;
+                  return {
+                    label: height ? `${height}p` : `Level ${index}`,
+                    height: height,
+                    index: index,
+                    track: track,
+                  };
+                })
+                .filter((q: any) => q.height > 0);
+
+              // Deduplicate qualities by height
+              const uniqueQualities: any[] = [];
+              const seenHeights = new Set();
+              qualities.forEach((q: any) => {
+                if (!seenHeights.has(q.height)) {
+                  seenHeights.add(q.height);
+                  uniqueQualities.push(q);
+                }
+              });
+
+              uniqueQualities.sort((a, b) => b.height - a.height);
+              setAvailableQualities(uniqueQualities);
+
+              if (quality !== "auto") {
+                const selectedTrack = uniqueQualities.find((q: any) => q.label === quality);
+                if (selectedTrack) {
+                  player.configure({ abr: { enabled: false } });
+                  player.selectVariantTrack(selectedTrack.track, /* clearBuffer = */ true);
+                }
+              }
+            }
+          });
+
+          await player.load(src);
+          
+          if (!active) return;
+          setIsLoading(false);
+
+          if (autoPlay) {
+            video.play().catch((err: any) => console.log("Autoplay blocked:", err));
+          }
+
+          if (initialTime && initialTime > 0) {
+            video.currentTime = initialTime;
+          }
+
+        } catch (err: any) {
+          console.error("Failed to initialize Shaka Player:", err);
+          if (active) {
+            setError(`Shaka Player failed to load: ${err.message || err}`);
+            setIsLoading(false);
+          }
+        }
+      } else if (Hls.isSupported() && type === "application/x-mpegURL") {
+        hls = new Hls({
           enableWorker: true,
           lowLatencyMode: true,
           backBufferLength: 90,
-          // xhrSetup: (xhr: XMLHttpRequest) => {
-          //   xhr.withCredentials = true;
-          // },
         });
 
         hls.loadSource(src);
@@ -138,10 +284,11 @@ export function useVideoPlayer({
 
         hls.on(Hls.Events.MANIFEST_PARSED, () => {
           console.log("HLS manifest loaded");
-          setError(null); // Clear any previous errors
-          setRetryCount(0); // Reset retry count on successful load
+          if (!active) return;
+          setError(null);
+          setRetryCount(0);
 
-          const levels = hls.levels;
+          const levels = hls?.levels;
           if (levels && levels.length > 0) {
             const qualities = levels
               .map((level: any, index: number) => {
@@ -157,58 +304,55 @@ export function useVideoPlayer({
 
             qualities.sort((a, b) => b.height - a.height);
             setAvailableQualities(qualities);
-            console.log("Available qualities:", qualities);
 
             if (quality === "auto") {
-              hls.currentLevel = -1;
+              hls!.currentLevel = -1;
             } else {
               const selectedQuality = qualities.find(
                 (q) => q.label === quality,
               );
               if (selectedQuality) {
-                hls.currentLevel = selectedQuality.index;
+                hls!.currentLevel = selectedQuality.index;
               }
             }
           }
 
           setIsLoading(false);
           if (autoPlay) {
-            video.play();
+            video.play().catch((err: any) => console.log("Autoplay blocked:", err));
           }
 
-          // Seek to initial time if provided
           if (initialTime && initialTime > 0) {
             video.currentTime = initialTime;
           }
         });
 
         hls.on(Hls.Events.ERROR, (event: any, data: any) => {
-          //console.error("HLS error:", data);
-
+          if (!active) return;
           if (data.fatal) {
             switch (data.type) {
               case Hls.ErrorTypes.NETWORK_ERROR:
                 console.log("Fatal network error, trying to recover");
                 if (retryCount < 3) {
                   setRetryCount((prev) => prev + 1);
-                  setTimeout(() => hls.startLoad(), 1000);
+                  setTimeout(() => hls?.startLoad(), 1000);
                 } else {
                   setError(
                     "Network error: Unable to load video. Please check your connection and try again.",
                   );
-                  hls.destroy();
+                  hls?.destroy();
                 }
                 break;
               case Hls.ErrorTypes.MEDIA_ERROR:
                 console.log("Fatal media error, trying to recover");
                 if (retryCount < 2) {
                   setRetryCount((prev) => prev + 1);
-                  setTimeout(() => hls.recoverMediaError(), 1000);
+                  setTimeout(() => hls?.recoverMediaError(), 1000);
                 } else {
                   setError(
                     "Media error: Video format not supported or corrupted. Please try a different video.",
                   );
-                  hls.destroy();
+                  hls?.destroy();
                 }
                 break;
               default:
@@ -216,12 +360,9 @@ export function useVideoPlayer({
                 setError(
                   "Video playback error: Unable to play this video. Please try again later.",
                 );
-                hls.destroy();
+                hls?.destroy();
                 break;
             }
-          } else {
-            // Non-fatal errors - just log but don't show to user
-            console.warn("Non-fatal HLS error:", data);
           }
         });
 
@@ -230,28 +371,38 @@ export function useVideoPlayer({
         video.src = src;
         setIsLoading(false);
         if (autoPlay) {
-          video.play();
+          video.play().catch((err: any) => console.log("Autoplay blocked:", err));
         }
 
-        // Seek to initial time if provided
         if (initialTime && initialTime > 0) {
           video.currentTime = initialTime;
         }
       }
     };
 
-    initHls();
+    initPlayer();
 
     return () => {
+      active = false;
+      if (hls) {
+        hls.destroy();
+      }
       if (hlsRef.current) {
         hlsRef.current.destroy();
         hlsRef.current = null;
+      }
+      if (shakaPlayer) {
+        shakaPlayer.destroy();
+      }
+      if (shakaPlayerRef.current) {
+        shakaPlayerRef.current.destroy();
+        shakaPlayerRef.current = null;
       }
       if (updateIntervalRef.current) {
         clearInterval(updateIntervalRef.current);
       }
     };
-  }, [src, type, autoPlay, initialTime]);
+  }, [src, type, autoPlay, initialTime, retryTrigger, drmKeyId]);
 
   // Video event handlers
   useEffect(() => {
@@ -382,7 +533,7 @@ export function useVideoPlayer({
           setDragVolume(newVolume);
           setVolumeHoverValue(newVolume);
           videoRef.current.volume = newVolume;
-          setIsMuted(newVolume === 0);
+          setMuted(newVolume === 0);
           setShowVolumeTooltip(true);
         }
       }
@@ -441,30 +592,7 @@ export function useVideoPlayer({
     setError(null);
     setRetryCount(0);
     setIsLoading(true);
-
-    // Re-initialize HLS
-    if (hlsRef.current) {
-      hlsRef.current.destroy();
-      hlsRef.current = null;
-    }
-
-    const video = videoRef.current;
-    if (!video) return;
-
-    if (Hls.isSupported() && type === "application/x-mpegURL") {
-      const hls = new Hls({
-        enableWorker: true,
-        lowLatencyMode: true,
-        backBufferLength: 90,
-      });
-
-      hls.loadSource(src);
-      hls.attachMedia(video);
-      hlsRef.current = hls;
-    } else if (video.canPlayType(type)) {
-      video.src = src;
-      setIsLoading(false);
-    }
+    setRetryTrigger((prev) => prev + 1);
   };
 
   const togglePlay = async () => {
@@ -485,6 +613,22 @@ export function useVideoPlayer({
   };
 
   const changeQuality = (qualityLabel: string) => {
+    if (shakaPlayerRef.current) {
+      const player = shakaPlayerRef.current;
+      if (qualityLabel === "Auto") {
+        player.configure({ abr: { enabled: true } });
+        setQuality("auto");
+      } else {
+        const selected = availableQualities.find((q) => q.label === qualityLabel);
+        if (selected && selected.track) {
+          player.configure({ abr: { enabled: false } });
+          player.selectVariantTrack(selected.track, /* clearBuffer = */ true);
+          setQuality(qualityLabel as any);
+        }
+      }
+      return;
+    }
+
     if (!hlsRef.current) return;
 
     const hls = hlsRef.current;
@@ -499,7 +643,7 @@ export function useVideoPlayer({
 
       if (selectedQuality) {
         hls.currentLevel = selectedQuality.index;
-        setQuality(qualityLabel);
+        setQuality(qualityLabel as any);
       }
     }
   };

@@ -10,6 +10,7 @@ import { ResumeDialog } from "@/components/ui/resume-dialog";
 import { useWatchProgress } from "@/hooks/use-watch-progress";
 import { videosControllerGetVideoById } from "@/apis/api/videos";
 import MovieVideoPlayerComponent from "../ui/video-player/movie-video-player";
+import useVideoAccess from "@/hooks/use-video-access";
 interface MovieDetailHeroVideoProps {
   title: string;
   backdropUrl: string;
@@ -98,12 +99,11 @@ export function MovieDetailHeroVideo({
     // Video player will start from 0
   };
 
-  //Thay props saau nay
-  //const { videoContent } = useVideoAccess(videoSources?.url || "");
-  const videoContent = {
-    src: getS3Url(videoSources?.url || ""),
-    type: videoSources?.type || "application/x-mpegURL",
-  };
+  const { videoContent, isLoading: isAccessLoading } = useVideoAccess(
+    videoId
+      ? { videoId }
+      : { s3KeyStream: videoSources?.url || "" }
+  );
   return (
     <div className="relative w-full bg-black">
       {/* Video Container */}
@@ -156,9 +156,18 @@ export function MovieDetailHeroVideo({
             {viewMode === "movie" ? (
               <div className="absolute inset-0 w-full h-full bg-black">
                 {/* Video Player */}
-                {videoContent && (
+                {isAccessLoading ? (
+                  <div className="w-full h-full flex items-center justify-center">
+                    <div className="text-white text-lg flex items-center gap-2">
+                      <span className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></span>
+                      Loading secure player...
+                    </div>
+                  </div>
+                ) : videoContent ? (
                   <MovieVideoPlayerComponent
-                    {...videoContent}
+                    src={videoContent.src}
+                    type={videoContent.type}
+                    drmKeyId={videoContent.drmKeyId}
                     autoPlay={true}
                     movieId={movieId}
                     videoId={videoId}
@@ -171,6 +180,10 @@ export function MovieDetailHeroVideo({
                       // Callback to update duration when available
                     }}
                   />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center">
+                    <div className="text-red-500 text-lg">Failed to retrieve video stream.</div>
+                  </div>
                 )}
               </div>
             ) : (

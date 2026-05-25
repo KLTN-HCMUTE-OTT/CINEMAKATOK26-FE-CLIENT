@@ -43,11 +43,13 @@ function HomeContent() {
       <div className="space-y-16 py-8">
         {/* {isAuthenticated && <RecommendedTvShows />} */}
         <TrendingMoviesList page={1} limit={10} />
-        <ActiveRoomsPreview />
+        {/* <ActiveRoomsPreview /> */}
         <NewReleases />
       </div>
 
-      <PricingPlans />
+      <div id="pricing">
+        <PricingPlans />
+      </div>
 
       <div className="space-y-16 py-8">
         <TopArtists />

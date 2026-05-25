@@ -14,6 +14,7 @@ export interface MovieVideoPlayerProps {
   initialTime?: number;
   sprites?: string[];
   vttFiles?: string[];
+  drmKeyId?: string | null;
 }
 
 const MovieVideoPlayerComponent = ({
@@ -28,6 +29,7 @@ const MovieVideoPlayerComponent = ({
   initialTime,
   sprites,
   vttFiles,
+  drmKeyId,
 }: MovieVideoPlayerProps) => {
   return (
     <div className="w-full h-full">
@@ -44,6 +46,7 @@ const MovieVideoPlayerComponent = ({
         initialTime={initialTime}
         sprites={sprites}
         vttFiles={vttFiles}
+        drmKeyId={drmKeyId}
       />
     </div>
   );

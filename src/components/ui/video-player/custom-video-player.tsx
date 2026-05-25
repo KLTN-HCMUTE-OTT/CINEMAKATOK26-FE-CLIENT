@@ -32,6 +32,7 @@ interface VideoPlayerProps {
   totalEpisodesProp?: number;
   onPrevEpisode?: () => void;
   onNextEpisode?: () => void;
+  drmKeyId?: string | null;
 }
 
 export function CustomVideoPlayer({
@@ -52,6 +53,7 @@ export function CustomVideoPlayer({
   totalEpisodesProp,
   onPrevEpisode,
   onNextEpisode,
+  drmKeyId,
 }: VideoPlayerProps) {
   const openLoginModal = useUIStore((s) => s.openLoginModal);
   const [isRatingDialogOpen, setIsRatingDialogOpen] = useState(false);
@@ -119,6 +121,7 @@ export function CustomVideoPlayer({
     totalEpisodes: totalEpisodesProp,
     onPrevEpisode,
     onNextEpisode,
+    drmKeyId,
   });
 
   // Get shared state from context (favorite, watchlist)

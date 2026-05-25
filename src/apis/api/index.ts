@@ -22,7 +22,10 @@ import * as episodeReviews from "./episodeReviews";
 import * as reviewReplies from "./reviewReplies";
 import * as reports from "./reports";
 import * as payments from "./payments";
+import * as subscriptions from "./subscriptions";
+import * as health from "./health";
 import * as streaming from "./streaming";
+import * as drm from "./drm";
 import * as auditLogs from "./auditLogs";
 import * as analytics from "./analytics";
 import * as watchParty from "./watchParty";
@@ -47,7 +50,10 @@ export default {
   reviewReplies,
   reports,
   payments,
+  subscriptions,
+  health,
   streaming,
+  drm,
   auditLogs,
   analytics,
   watchParty,
