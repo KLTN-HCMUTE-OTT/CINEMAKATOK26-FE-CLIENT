@@ -337,8 +337,8 @@ declare namespace API {
   type ClearKeyLicenseRequestDto = {
     /** Array of Key IDs (base64url or hex) from DASH manifest */
     kids: string[];
-    /** Content ID */
-    contentId: string;
+    /** Video ID */
+    videoId: string;
   };
 
   type ClearKeyLicenseResponseDto = {
