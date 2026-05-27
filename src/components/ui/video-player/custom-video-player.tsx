@@ -11,6 +11,7 @@ import { TVSeriesVideoControls } from "./TVSeriesVideoControls";
 import { useActions } from "@/contexts/movie-actions-context";
 import { useUIStore } from "@/store";
 import { isAuthenticated } from "@/lib/auth";
+import { AlertCircle, RotateCcw } from "lucide-react";
 
 interface VideoPlayerProps {
   src: string;
@@ -76,6 +77,7 @@ export function CustomVideoPlayer({
     quality,
     availableQualities,
     isLoading,
+    error,
     tooltipTime,
     tooltipPosition,
     showProgressTooltip,
@@ -84,6 +86,7 @@ export function CustomVideoPlayer({
     dragTime,
     dragVolume,
     formatTime,
+    retryVideo,
     togglePlay,
     changeQuality,
     handleSeek,
@@ -172,10 +175,30 @@ export function CustomVideoPlayer({
       />
 
       {/* Loading Spinner */}
-      {isLoading && <LoadingSpinner />}
+      {isLoading && !error && <LoadingSpinner />}
 
       {/* Center Play Button Overlay */}
-      {!isPlaying && !isLoading && <PlayButton onClick={togglePlay} />}
+      {!isPlaying && !isLoading && !error && <PlayButton onClick={togglePlay} />}
+
+      {/* Error Overlay */}
+      {error && (
+        <div className="absolute inset-0 bg-black/95 flex flex-col items-center justify-center p-6 text-center z-30">
+          <div className="w-16 h-16 rounded-full bg-red-500/10 flex items-center justify-center mb-4 text-red-500 animate-pulse">
+            <AlertCircle className="w-8 h-8" />
+          </div>
+          <h3 className="text-xl font-bold text-white mb-2">Playback Error</h3>
+          <p className="text-zinc-400 max-w-md mb-6 text-sm md:text-base leading-relaxed">
+            {error}
+          </p>
+          <button
+            onClick={retryVideo}
+            className="flex items-center gap-2 bg-orange-500 hover:bg-orange-600 text-white px-5 py-2.5 rounded-lg font-semibold shadow-lg hover:shadow-orange-500/20 active:scale-95 transition-all cursor-pointer"
+          >
+            <RotateCcw className="w-4 h-4" />
+            Try Again
+          </button>
+        </div>
+      )}
 
       {/* Controls Overlay */}
       <div

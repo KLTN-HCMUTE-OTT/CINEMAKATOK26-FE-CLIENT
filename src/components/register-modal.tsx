@@ -221,9 +221,10 @@ function RegisterModal({
         gender: gender || undefined,
         otp,
       });
-      if (response?.data?.statusCode === 201) {
+      if (response?.data?.statusCode === 200) {
         // Show success message
         toast.success(
+          response?.data?.message ||
           "Registration successful! Please login with your credentials.",
         );
 

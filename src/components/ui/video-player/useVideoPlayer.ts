@@ -52,6 +52,7 @@ export function useVideoPlayer({
   const hlsRef = useRef<Hls | null>(null);
   const shakaPlayerRef = useRef<any>(null);
   const controlsTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const destroyPromiseRef = useRef<Promise<void> | null>(null);
 
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
@@ -150,6 +151,43 @@ export function useVideoPlayer({
       setIsLoading(true);
       setError(null);
 
+      // Await previous player destruction if it was initiated in cleanup
+      if (destroyPromiseRef.current) {
+        try {
+          await destroyPromiseRef.current;
+        } catch (e) {
+          console.warn("Error waiting for previous Shaka player destruction:", e);
+        }
+        destroyPromiseRef.current = null;
+      }
+
+      // Clean up previous player instances to avoid race conditions/attaching conflicts
+      if (shakaPlayerRef.current) {
+        try {
+          await shakaPlayerRef.current.destroy();
+        } catch (e) {
+          console.warn("Error destroying previous Shaka player:", e);
+        }
+        shakaPlayerRef.current = null;
+      }
+      if (hlsRef.current) {
+        try {
+          hlsRef.current.destroy();
+        } catch (e) {
+          console.warn("Error destroying previous HLS player:", e);
+        }
+        hlsRef.current = null;
+      }
+
+      // Reset video element source and state
+      if (video) {
+        video.src = "";
+        video.removeAttribute("src");
+        try {
+          video.load();
+        } catch (e) {}
+      }
+
       // Detect DASH stream
       const isDash = type === "application/dash+xml" || src?.includes(".mpd") || !!drmKeyId;
 
@@ -211,16 +249,35 @@ export function useVideoPlayer({
 
           // Listen for player errors
           player.addEventListener("error", (event: any) => {
-            const error = event.detail;
+            const err = event.detail || event;
             console.error("Shaka Player error details:", {
-              code: error?.code,
-              category: error?.category,
-              severity: error?.severity,
-              message: error?.message,
-              data: error?.data,
+              code: err?.code,
+              category: err?.category,
+              severity: err?.severity,
+              message: err?.message,
             });
             if (active) {
-              setError(`DRM Playback error: ${error?.message || `Code ${error?.code} (License validation failed)`}`);
+              let errMsg = "";
+              if (err?.category === 6) {
+                if (err?.code === 6007) {
+                  errMsg = "DRM License Request Failed: You do not have an active subscription or permission to view this content, or your session has expired. Please log in and check your subscription status.";
+                } else if (err?.code === 6008) {
+                  errMsg = "DRM License Rejected: The decryption license response was rejected by the server.";
+                } else if (err?.code === 6001) {
+                  errMsg = "DRM Key System Unsupported: Your browser does not support the required DRM key system.";
+                } else {
+                  errMsg = `DRM Error (Code ${err?.code}): Secure playback licensing failed. ${err?.message || ''}`;
+                }
+              } else if (err?.category === 1) {
+                errMsg = `Network Error (Code ${err?.code}): Failed to load video segments from the stream server. Please check your internet connection.`;
+              } else if (err?.category === 3) {
+                errMsg = `Media Error (Code ${err?.code}): Video decoding failed. Your browser may lack the necessary codecs to play this content.`;
+              }
+
+              if (!errMsg) {
+                errMsg = err?.message || `Playback Error (Code ${err?.code || 'Unknown'}): Secure streaming failed.`;
+              }
+              setError(errMsg);
             }
           });
 
@@ -349,7 +406,7 @@ export function useVideoPlayer({
                   setTimeout(() => hls?.startLoad(), 1000);
                 } else {
                   setError(
-                    "Network error: Unable to load video. Please check your connection and try again.",
+                    "Network Error: Unable to connect to the streaming server. Please verify your internet connection and try again.",
                   );
                   hls?.destroy();
                 }
@@ -361,7 +418,7 @@ export function useVideoPlayer({
                   setTimeout(() => hls?.recoverMediaError(), 1000);
                 } else {
                   setError(
-                    "Media error: Video format not supported or corrupted. Please try a different video.",
+                    "Media Error: The video format is corrupted or unsupported by your browser.",
                   );
                   hls?.destroy();
                 }
@@ -369,7 +426,7 @@ export function useVideoPlayer({
               default:
                 console.log("Fatal error, destroying HLS");
                 setError(
-                  "Video playback error: Unable to play this video. Please try again later.",
+                  "Playback Error: An unexpected error occurred. HLS player has stopped.",
                 );
                 hls?.destroy();
                 break;
@@ -396,17 +453,20 @@ export function useVideoPlayer({
     return () => {
       active = false;
       if (hls) {
-        hls.destroy();
+        try {
+          hls.destroy();
+        } catch (e) {}
       }
       if (hlsRef.current) {
-        hlsRef.current.destroy();
+        try {
+          hlsRef.current.destroy();
+        } catch (e) {}
         hlsRef.current = null;
       }
       if (shakaPlayer) {
-        shakaPlayer.destroy();
-      }
-      if (shakaPlayerRef.current) {
-        shakaPlayerRef.current.destroy();
+        destroyPromiseRef.current = shakaPlayer.destroy();
+      } else if (shakaPlayerRef.current) {
+        destroyPromiseRef.current = shakaPlayerRef.current.destroy();
         shakaPlayerRef.current = null;
       }
       if (updateIntervalRef.current) {
