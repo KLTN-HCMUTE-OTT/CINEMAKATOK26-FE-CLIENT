@@ -16,6 +16,16 @@ import { useRouter } from "next/navigation";
 import { getS3Url } from "@/hooks/aws";
 import { ResumeDialog } from "@/components/ui/resume-dialog";
 import { WatchPartyQuickButton } from "@/components/watch-party/watch-party-quick-button";
+import { AlertCircle } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 interface TVSeriesPageContentProps {
   episodeId: string;
@@ -41,11 +51,27 @@ export default function TVSeriesVideoContent({
     episodeId: episode?.id,
   });
 
-  const { videoContent, isLoading: isAccessLoading } = useVideoAccess(
+  const { videoContent, isLoading: isAccessLoading, error: accessError } = useVideoAccess(
     episode?.video.id
       ? { videoId: episode.video.id }
       : { s3KeyStream: episode?.video.videoUrl || "" }
   );
+
+  const [showError, setShowError] = useState(true);
+
+  useEffect(() => {
+    setShowError(true);
+  }, [episodeId]);
+
+  const getErrorMessage = (err: any) => {
+    if (!err) return "Failed to retrieve video stream. Please try again later.";
+    if (typeof err === "string") return err;
+    if (err.response?.data?.message) {
+      const msg = err.response.data.message;
+      return Array.isArray(msg) ? msg.join(", ") : msg;
+    }
+    return err.message || "An unexpected error occurred.";
+  };
 
   useEffect(() => {
     if (episode?.video.id) {
@@ -220,7 +246,7 @@ export default function TVSeriesVideoContent({
               />
             ) : (
               <div className="w-full aspect-video bg-black flex items-center justify-center rounded-2xl overflow-hidden border border-gray-800">
-                <div className="text-red-500 text-lg font-semibold">Failed to retrieve video stream.</div>
+                <div className="text-zinc-500 text-sm">Failed to retrieve video stream.</div>
               </div>
             )}
             <nav
@@ -316,6 +342,34 @@ export default function TVSeriesVideoContent({
         onStartOver={handleStartOver}
         onClose={() => setShowResumeDialog(false)}
       />
+
+      {/* Error Alert Dialog */}
+      <AlertDialog
+        open={!isAccessLoading && !videoContent && showError}
+        onOpenChange={setShowError}
+      >
+        <AlertDialogContent className="bg-zinc-950/95 border border-zinc-800 text-white backdrop-blur-md max-w-md">
+          <AlertDialogHeader className="flex flex-col items-center text-center">
+            <div className="w-12 h-12 rounded-full bg-red-500/10 flex items-center justify-center mb-2 animate-pulse">
+              <AlertCircle className="w-6 h-6 text-red-500" />
+            </div>
+            <AlertDialogTitle className="text-xl font-bold tracking-tight text-white">
+              Playback Error
+            </AlertDialogTitle>
+            <AlertDialogDescription className="text-zinc-400 text-sm mt-2">
+              {getErrorMessage(accessError)}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="flex justify-end mt-4 w-full">
+            <AlertDialogAction
+              onClick={() => setShowError(false)}
+              className="w-full sm:w-auto bg-orange-500 hover:bg-orange-600 text-white font-semibold transition-colors"
+            >
+              Dismiss
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

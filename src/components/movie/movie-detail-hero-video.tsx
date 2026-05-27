@@ -2,7 +2,7 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
-import { Play, Film, X } from "lucide-react";
+import { Play, Film, X, AlertCircle } from "lucide-react";
 import Image from "next/image";
 import { useState, useEffect } from "react";
 import { getS3Url } from "@/hooks/aws";
@@ -11,6 +11,15 @@ import { useWatchProgress } from "@/hooks/use-watch-progress";
 import { videosControllerGetVideoById } from "@/apis/api/videos";
 import MovieVideoPlayerComponent from "../ui/video-player/movie-video-player";
 import useVideoAccess from "@/hooks/use-video-access";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 interface MovieDetailHeroVideoProps {
   title: string;
   backdropUrl: string;
@@ -99,11 +108,21 @@ export function MovieDetailHeroVideo({
     // Video player will start from 0
   };
 
-  const { videoContent, isLoading: isAccessLoading } = useVideoAccess(
+  const { videoContent, isLoading: isAccessLoading, error: accessError } = useVideoAccess(
     videoId
       ? { videoId }
       : { s3KeyStream: videoSources?.url || "" }
   );
+
+  const getErrorMessage = (err: any) => {
+    if (!err) return "Failed to retrieve video stream. Please try again later.";
+    if (typeof err === "string") return err;
+    if (err.response?.data?.message) {
+      const msg = err.response.data.message;
+      return Array.isArray(msg) ? msg.join(", ") : msg;
+    }
+    return err.message || "An unexpected error occurred.";
+  };
   return (
     <div className="relative w-full bg-black">
       {/* Video Container */}
@@ -181,8 +200,8 @@ export function MovieDetailHeroVideo({
                     }}
                   />
                 ) : (
-                  <div className="w-full h-full flex items-center justify-center">
-                    <div className="text-red-500 text-lg">Failed to retrieve video stream.</div>
+                  <div className="w-full h-full flex items-center justify-center bg-black/90">
+                    <div className="text-zinc-500 text-sm">Failed to retrieve video stream.</div>
                   </div>
                 )}
               </div>
@@ -246,6 +265,44 @@ export function MovieDetailHeroVideo({
         onStartOver={handleStartOver}
         onClose={() => setShowResumeDialog(false)}
       />
+
+      {/* Error Alert Dialog */}
+      <AlertDialog
+        open={viewMode === "movie" && !isAccessLoading && !videoContent}
+        onOpenChange={(open) => {
+          if (!open) setViewMode("idle");
+        }}
+      >
+        <AlertDialogContent className="bg-zinc-950/95 border border-zinc-800 text-white backdrop-blur-md max-w-md">
+          <AlertDialogHeader className="flex flex-col items-center text-center">
+            <div className="w-12 h-12 rounded-full bg-red-500/10 flex items-center justify-center mb-2 animate-pulse">
+              <AlertCircle className="w-6 h-6 text-red-500" />
+            </div>
+            <AlertDialogTitle className="text-xl font-bold tracking-tight text-white">
+              Playback Error
+            </AlertDialogTitle>
+            <AlertDialogDescription className="text-zinc-400 text-sm mt-2">
+              {getErrorMessage(accessError)}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="flex flex-col sm:flex-row gap-2 mt-4 w-full justify-end">
+            {trailerUrl && (
+              <AlertDialogAction
+                onClick={() => setViewMode("trailer")}
+                className="w-full sm:w-auto bg-zinc-900 hover:bg-zinc-800 text-zinc-300 border border-zinc-800 font-semibold"
+              >
+                Watch Trailer
+              </AlertDialogAction>
+            )}
+            <AlertDialogAction
+              onClick={() => setViewMode("idle")}
+              className="w-full sm:w-auto bg-orange-500 hover:bg-orange-600 text-white font-semibold transition-colors"
+            >
+              Dismiss
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
