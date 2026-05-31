@@ -8,10 +8,20 @@ import { ProgressBar } from "./ProgressBar";
 import { VideoControls } from "./VideoControls";
 import { RatingDialog } from "./RatingDialog";
 import { TVSeriesVideoControls } from "./TVSeriesVideoControls";
+import { ShakaCensorOverlays } from "./ShakaCensorOverlays";
+import { CensorshipControlsPanel } from "./CensorshipControlsPanel";
 import { useActions } from "@/contexts/movie-actions-context";
 import { useUIStore } from "@/store";
 import { isAuthenticated } from "@/lib/auth";
-import { AlertCircle, RotateCcw } from "lucide-react";
+import { AlertCircle, RotateCcw, Shield } from "lucide-react";
+import { useContentCensorship } from "@/hooks/use-content-censorship";
+import { normaliseCensorFrames } from "@/lib/censorship-utils";
+import {
+  CensorFrame,
+  ContentPreferences,
+  DEFAULT_CONTENT_PREFERENCES,
+} from "@/types/censorship.types";
+import { useContentPreferencesStore } from "@/store/content-preferences.store";
 
 interface VideoPlayerProps {
   src: string;
@@ -34,6 +44,13 @@ interface VideoPlayerProps {
   onPrevEpisode?: () => void;
   onNextEpisode?: () => void;
   drmKeyId?: string | null;
+  // Phase 4: Content Censorship
+  /** Raw violentSegments from VideoDto (Record<string,any> from API) */
+  violentSegments?: unknown;
+  /** Raw nuditySegments from VideoDto (Record<string,any> from API) */
+  nuditySegments?: unknown;
+  /** Initial content preferences (e.g. from user profile settings) */
+  initialPreferences?: ContentPreferences;
 }
 
 export function CustomVideoPlayer({
@@ -55,9 +72,51 @@ export function CustomVideoPlayer({
   onPrevEpisode,
   onNextEpisode,
   drmKeyId,
+  violentSegments,
+  nuditySegments,
+  initialPreferences,
 }: VideoPlayerProps) {
   const openLoginModal = useUIStore((s) => s.openLoginModal);
   const [isRatingDialogOpen, setIsRatingDialogOpen] = useState(false);
+
+  // ── Phase 4: Load stored preferences (from user profile settings) ─────
+  const storedPreferences = useContentPreferencesStore((s) => s.preferences);
+  const fetchPreferences = useContentPreferencesStore((s) => s.fetchPreferences);
+
+  // ── Phase 4: Content Censorship ────────────────────────────────────────
+  const [preferences, setPreferences] = useState<ContentPreferences>(
+    initialPreferences ?? storedPreferences ?? DEFAULT_CONTENT_PREFERENCES
+  );
+
+  // Sync player preferences state when stored preferences in Zustand are hydrated or updated from the server
+  React.useEffect(() => {
+    if (!initialPreferences && storedPreferences) {
+      setPreferences(storedPreferences);
+    }
+  }, [storedPreferences, initialPreferences]);
+
+  // Fetch the latest preferences from the server when player mounts
+  React.useEffect(() => {
+    void fetchPreferences();
+  }, [fetchPreferences]);
+
+  const [showCensorPanel, setShowCensorPanel] = useState(false);
+
+  const violentFrames: CensorFrame[] = React.useMemo(
+    () => normaliseCensorFrames(violentSegments),
+    [violentSegments],
+  );
+  const nudityFrames: CensorFrame[] = React.useMemo(
+    () => normaliseCensorFrames(nuditySegments),
+    [nuditySegments],
+  );
+
+  const hasViolence = violentFrames.length > 0;
+  const hasNudity = nudityFrames.length > 0;
+  const hasCensorData = hasViolence || hasNudity;
+
+  // videoRef is created inside useVideoPlayer; we also need a containerRef
+  // for the DOM injection.  We get both from the hook below.
 
   // Video player state and controls
   const {
@@ -127,6 +186,14 @@ export function CustomVideoPlayer({
     drmKeyId,
   });
 
+  // ── Phase 4: Censorship hook (must come after useVideoPlayer) ─────────
+  const { isFullBlurActive, activeBoxes } = useContentCensorship(
+    videoRef,
+    violentFrames.length > 0 ? violentFrames : null,
+    nudityFrames.length > 0 ? nudityFrames : null,
+    preferences,
+  );
+
   // Get shared state from context (favorite, watchlist)
   const {
     isFavorite,
@@ -173,6 +240,39 @@ export function CustomVideoPlayer({
         playsInline
         preload="metadata"
       />
+
+      {/* ── Phase 4: Censorship Overlays ─────────────────────────────── */}
+      <ShakaCensorOverlays
+        videoContainerRef={containerRef}
+        videoRef={videoRef}
+        isFullBlurActive={isFullBlurActive}
+        activeBoxes={activeBoxes}
+      />
+
+      {/* ── Phase 4: Censorship Settings Panel ───────────────────────── */}
+      {showCensorPanel && (
+        <CensorshipControlsPanel
+          preferences={preferences}
+          onChange={setPreferences}
+          hasViolence={hasViolence}
+          hasNudity={hasNudity}
+        />
+      )}
+
+      {/* ── Phase 4: Shield Toggle Button (top-right) ────────────────── */}
+      {hasCensorData && showControls && (
+        <button
+          title="Content Filters"
+          onClick={() => setShowCensorPanel((prev) => !prev)}
+          className={`absolute top-4 right-4 z-20 p-2 rounded-full transition-all cursor-pointer ${
+            showCensorPanel
+              ? "bg-orange-500 text-white shadow-lg shadow-orange-500/30"
+              : "bg-black/50 text-white/70 hover:bg-black/70 hover:text-white"
+          }`}
+        >
+          <Shield className="w-4 h-4" />
+        </button>
+      )}
 
       {/* Loading Spinner */}
       {isLoading && !error && <LoadingSpinner />}

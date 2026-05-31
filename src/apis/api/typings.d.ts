@@ -146,9 +146,9 @@ declare namespace API {
     /** Session ID to group actions into transactions for recommendation engine */
     sessionId: string;
     /** Action performed */
-    action: Record<string, any>;
+    action: string;
     /** Type of resource the action was performed on */
-    resourceType?: Record<string, any>;
+    resourceType?: string;
     /** ID of the resource the action was performed on */
     resourceId?: string;
     /** Signal weight for recommendation engine (2=strong, 1=medium, -1=negative, 0=ignored) */
@@ -511,7 +511,7 @@ declare namespace API {
     /** Birth date of the actor */
     dateOfBirth: string;
     /** Gender of the actor */
-    gender: Record<string, any>;
+    gender: string;
     /** Biography of the actor */
     bio: string;
     /** Profile picture of the actor */
@@ -663,6 +663,18 @@ declare namespace API {
     sprites: string[];
     /** VTT file URLs */
     vttFiles: string[];
+    /** Whether the video contains violent scenes */
+    isViolent: Record<string, any>;
+    /** Overall violence score (0.0 to 1.0) */
+    violenceScore: Record<string, any>;
+    /** Detected violence coordinates by frame */
+    violentSegments: Record<string, any>;
+    /** Whether the video contains nude/sexy scenes */
+    isNude: Record<string, any>;
+    /** Overall nudity score (0.0 to 1.0) */
+    nudityScore: Record<string, any>;
+    /** Detected nudity coordinates by frame */
+    nuditySegments: Record<string, any>;
   };
 
   type CreateWatchListDto = {
@@ -700,7 +712,7 @@ declare namespace API {
     /** Birth date of the actor */
     dateOfBirth: string;
     /** Gender of the actor */
-    gender: Record<string, any>;
+    gender: string;
     /** Biography of the actor */
     bio: string;
     /** Profile picture of the actor */
@@ -1247,7 +1259,7 @@ declare namespace API {
     /** Name of the user who performed the action */
     userName: string;
     /** Action performed */
-    action: Record<string, any>;
+    action: string;
     /** Description of the action */
     description: string;
   };
@@ -1888,6 +1900,13 @@ declare namespace API {
     directors: UpdateDirectorDto[];
   };
 
+  type UpdateContentPreferencesDto = {
+    /** Violence sensitivity level */
+    violence: "off" | "moderate" | "strict";
+    /** Nudity sensitivity level */
+    nudity: "off" | "moderate" | "strict";
+  };
+
   type UpdateDirectorDto = {
     /** Unique identifier of the entity */
     id: string;
@@ -1896,7 +1915,7 @@ declare namespace API {
     /** Birth date of the actor */
     dateOfBirth: string;
     /** Gender of the actor */
-    gender: Record<string, any>;
+    gender: string;
     /** Biography of the actor */
     bio: string;
     /** Profile picture of the actor */
@@ -2052,6 +2071,18 @@ declare namespace API {
     sprites: string[];
     /** VTT file URLs */
     vttFiles: string[];
+    /** Whether the video contains violent scenes */
+    isViolent: Record<string, any>;
+    /** Overall violence score (0.0 to 1.0) */
+    violenceScore: Record<string, any>;
+    /** Detected violence coordinates by frame */
+    violentSegments: Record<string, any>;
+    /** Whether the video contains nude/sexy scenes */
+    isNude: Record<string, any>;
+    /** Overall nudity score (0.0 to 1.0) */
+    nudityScore: Record<string, any>;
+    /** Detected nudity coordinates by frame */
+    nuditySegments: Record<string, any>;
   };
 
   type UpdateWatchProgressDto = {
@@ -2221,6 +2252,18 @@ declare namespace API {
     sprites: string[];
     /** VTT file URLs */
     vttFiles: string[];
+    /** Whether the video contains violent scenes */
+    isViolent: Record<string, any>;
+    /** Overall violence score (0.0 to 1.0) */
+    violenceScore: Record<string, any>;
+    /** Detected violence coordinates by frame */
+    violentSegments: Record<string, any>;
+    /** Whether the video contains nude/sexy scenes */
+    isNude: Record<string, any>;
+    /** Overall nudity score (0.0 to 1.0) */
+    nudityScore: Record<string, any>;
+    /** Detected nudity coordinates by frame */
+    nuditySegments: Record<string, any>;
   };
 
   type VideoDtoPaginatedResponseDto = {

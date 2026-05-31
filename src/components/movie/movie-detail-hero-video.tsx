@@ -60,8 +60,8 @@ export function MovieDetailHeroVideo({
   useEffect(() => {
     if (videoId) {
       videosControllerGetVideoById({ id: videoId })
-        .then((res) => {
-          setVideoDetails(res.data);
+        .then((res: any) => {
+          setVideoDetails(res.data?.data);
         })
         .catch((err) => console.error("Failed to fetch video details", err));
     }
@@ -195,6 +195,8 @@ export function MovieDetailHeroVideo({
                     }
                     sprites={videoDetails?.sprites}
                     vttFiles={videoDetails?.vttFiles}
+                    violentSegments={videoDetails?.violentSegments}
+                    nuditySegments={videoDetails?.nuditySegments}
                     onTimeUpdate={(currentTime) => {
                       // Callback to update duration when available
                     }}

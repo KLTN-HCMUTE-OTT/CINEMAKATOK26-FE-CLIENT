@@ -23,6 +23,10 @@ export type {
 export { useWatchPartyStore } from "./watch-party.store";
 export type { WatchPartyStore, WatchPartyState, WatchPartyActions } from "./watch-party.store";
 
+export { useContentPreferencesStore } from "./content-preferences.store";
+export type { ContentPreferencesState } from "./content-preferences.store";
+
+
 export function hydrateStores() {
   if (typeof window === "undefined") return;
   useAuthStore.getState().hydrateFromSession();
