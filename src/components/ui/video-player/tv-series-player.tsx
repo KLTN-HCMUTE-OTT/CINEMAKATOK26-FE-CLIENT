@@ -21,6 +21,9 @@ export interface TVSeriesVideoPlayerProps {
   onPrevEpisode?: () => void;
   onNextEpisode?: () => void;
   drmKeyId?: string | null;
+  // Phase 4: Content Censorship
+  violentSegments?: unknown;
+  nuditySegments?: unknown;
 }
 
 export const TVSeriesVideoPlayerComponent = ({
@@ -41,6 +44,8 @@ export const TVSeriesVideoPlayerComponent = ({
   onPrevEpisode,
   onNextEpisode,
   drmKeyId,
+  violentSegments,
+  nuditySegments,
 }: TVSeriesVideoPlayerProps) => {
   return (
     <div className="w-full h-full">
@@ -64,6 +69,8 @@ export const TVSeriesVideoPlayerComponent = ({
         onPrevEpisode={onPrevEpisode}
         onNextEpisode={onNextEpisode}
         drmKeyId={drmKeyId}
+        violentSegments={violentSegments}
+        nuditySegments={nuditySegments}
       />
     </div>
   );

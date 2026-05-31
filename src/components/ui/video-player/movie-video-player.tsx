@@ -15,6 +15,9 @@ export interface MovieVideoPlayerProps {
   sprites?: string[];
   vttFiles?: string[];
   drmKeyId?: string | null;
+  // Phase 4: Content Censorship
+  violentSegments?: unknown;
+  nuditySegments?: unknown;
 }
 
 const MovieVideoPlayerComponent = ({
@@ -30,6 +33,8 @@ const MovieVideoPlayerComponent = ({
   sprites,
   vttFiles,
   drmKeyId,
+  violentSegments,
+  nuditySegments,
 }: MovieVideoPlayerProps) => {
   return (
     <div className="w-full h-full">
@@ -47,6 +52,8 @@ const MovieVideoPlayerComponent = ({
         sprites={sprites}
         vttFiles={vttFiles}
         drmKeyId={drmKeyId}
+        violentSegments={violentSegments}
+        nuditySegments={nuditySegments}
       />
     </div>
   );

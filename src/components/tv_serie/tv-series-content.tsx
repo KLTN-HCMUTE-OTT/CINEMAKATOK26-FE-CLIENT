@@ -232,6 +232,8 @@ export default function TVSeriesVideoContent({
                 initialTime={skipInitialTime ? 0 : resumeData?.watchedDuration}
                 sprites={videoDetails?.sprites}
                 vttFiles={videoDetails?.vttFiles}
+                violentSegments={videoDetails?.violentSegments}
+                nuditySegments={videoDetails?.nuditySegments}
                 onTimeUpdate={(currentTime) => {
                   // Callback to update duration when available
                 }}

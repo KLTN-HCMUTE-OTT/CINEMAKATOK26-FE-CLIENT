@@ -10,6 +10,7 @@ const tabs = [
   { id: "history", label: "History", path: "/profile/history" },
   { id: "watchlist", label: "Watchlist", path: "/profile/watchlist" },
   { id: "billing", label: "Billing", path: "/profile/billing" },
+  { id: "content", label: "Content Filters", path: "/profile/content" },
 ];
 
 interface ProfileTabsProps {

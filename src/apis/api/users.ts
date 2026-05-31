@@ -154,6 +154,31 @@ export async function userControllerGetUsersByIds(options?: {
   });
 }
 
+/** Get content preferences Get user content sensitivity preferences GET /api/v1/users/me/content-preferences */
+export async function userControllerGetContentPreferences(options?: {
+  [key: string]: any;
+}) {
+  return request<any>("/api/v1/users/me/content-preferences", {
+    method: "GET",
+    ...(options || {}),
+  });
+}
+
+/** Update content preferences Update user content sensitivity preferences (e.g. violence) PATCH /api/v1/users/me/content-preferences */
+export async function userControllerUpdateContentPreferences(
+  body: API.UpdateContentPreferencesDto,
+  options?: { [key: string]: any }
+) {
+  return request<any>("/api/v1/users/me/content-preferences", {
+    method: "PATCH",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    data: body,
+    ...(options || {}),
+  });
+}
+
 /** Get user profile Get the current user profile information GET /api/v1/users/profile */
 export async function userControllerGetProfile(options?: {
   [key: string]: any;
