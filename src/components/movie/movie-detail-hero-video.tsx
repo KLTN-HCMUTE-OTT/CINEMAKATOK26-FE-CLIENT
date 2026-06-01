@@ -12,7 +12,7 @@ import { videosControllerGetVideoById } from "@/apis/api/videos";
 import MovieVideoPlayerComponent from "../ui/video-player/movie-video-player";
 import useVideoAccess from "@/hooks/use-video-access";
 import { useUIStore } from "@/store";
-import { isAuthError, getFriendlyErrorMessage } from "@/lib/error-mapper";
+import { isUnauthenticatedError, isPermissionError, getFriendlyErrorMessage } from "@/lib/error-mapper";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -49,6 +49,7 @@ export function MovieDetailHeroVideo({
   const [viewMode, setViewMode] = useState<ViewMode>("idle");
   const [selectedSource, setSelectedSource] = useState(0);
   const openLoginModal = useUIStore((s) => s.openLoginModal);
+  const [pendingPlay, setPendingPlay] = useState(false);
   const [showResumeDialog, setShowResumeDialog] = useState(false);
   const [videoDuration, setVideoDuration] = useState(0);
   const [skipInitialTime, setSkipInitialTime] = useState(false);
@@ -116,6 +117,15 @@ export function MovieDetailHeroVideo({
       ? { videoId }
       : { s3KeyStream: videoSources?.url || "" }
   );
+
+  // When user logs in and the video query re-fetches successfully,
+  // automatically start playing if they had previously attempted to watch.
+  useEffect(() => {
+    if (pendingPlay && videoContent && !isAccessLoading) {
+      setPendingPlay(false);
+      setViewMode("movie");
+    }
+  }, [videoContent, isAccessLoading, pendingPlay]);
 
   return (
     <div className="relative w-full bg-black">
@@ -282,7 +292,8 @@ export function MovieDetailHeroVideo({
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter className="flex flex-col sm:flex-row gap-2 mt-4 w-full justify-end">
-            {isAuthError(accessError) ? (
+            {isUnauthenticatedError(accessError) ? (
+              // 401: Not logged in → offer Sign In
               <>
                 <AlertDialogAction
                   onClick={() => setViewMode("idle")}
@@ -293,6 +304,7 @@ export function MovieDetailHeroVideo({
                 <AlertDialogAction
                   onClick={() => {
                     setViewMode("idle");
+                    setPendingPlay(true);
                     openLoginModal();
                   }}
                   className="w-full sm:w-auto bg-orange-500 hover:bg-orange-600 text-white font-semibold transition-colors"
@@ -300,7 +312,26 @@ export function MovieDetailHeroVideo({
                   Sign In
                 </AlertDialogAction>
               </>
+            ) : isPermissionError(accessError) ? (
+              // 403: Logged in but no subscription/permission → offer Subscribe or Dismiss
+              <>
+                {trailerUrl && (
+                  <AlertDialogAction
+                    onClick={() => setViewMode("trailer")}
+                    className="w-full sm:w-auto bg-zinc-900 hover:bg-zinc-800 text-zinc-300 border border-zinc-800 font-semibold"
+                  >
+                    Watch Trailer
+                  </AlertDialogAction>
+                )}
+                <AlertDialogAction
+                  onClick={() => setViewMode("idle")}
+                  className="w-full sm:w-auto bg-orange-500 hover:bg-orange-600 text-white font-semibold transition-colors"
+                >
+                  Dismiss
+                </AlertDialogAction>
+              </>
             ) : (
+              // Other errors → Watch Trailer or Dismiss
               <>
                 {trailerUrl && (
                   <AlertDialogAction

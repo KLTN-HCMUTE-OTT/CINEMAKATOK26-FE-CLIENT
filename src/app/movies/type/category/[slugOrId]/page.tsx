@@ -37,7 +37,7 @@ export default async function MoviesByCategoryPage({ params }: Props) {
         <div className="px-6 grid grid-cols-1 lg:grid-cols-10 gap-6 items-start">
           {/* Sidebar trái */}
           <div className="lg:col-span-3">
-            <AppSidebar />
+            <AppSidebar type="movies" />
           </div>
 
           {/* Nội dung phải */}
