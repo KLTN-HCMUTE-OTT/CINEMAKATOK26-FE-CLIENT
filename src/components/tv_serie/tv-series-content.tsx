@@ -7,6 +7,8 @@ import { TVSeriesVideoPlayerComponent } from "../ui/video-player/tv-series-playe
 import { EpisodeCardList } from "./card/episode-card";
 import useVideoAccess from "@/hooks/use-video-access";
 import { useWatchProgress } from "@/hooks/use-watch-progress";
+import { useUIStore } from "@/store";
+import { isAuthError, getFriendlyErrorMessage } from "@/lib/error-mapper";
 import { videosControllerGetVideoById } from "@/apis/api/videos";
 import { MoreTVSeriesSection } from "./section/more-tv-series-section";
 import { DetailInfoSection } from "./section/detail-info-section";
@@ -37,6 +39,7 @@ export default function TVSeriesVideoContent({
   tvSeries,
 }: TVSeriesPageContentProps) {
   const router = useRouter();
+  const openLoginModal = useUIStore((s) => s.openLoginModal);
   const episode = tvSeries?.seasons
     .flatMap((season) => season.episodes)
     .find((ep) => ep.id === episodeId);
@@ -62,16 +65,6 @@ export default function TVSeriesVideoContent({
   useEffect(() => {
     setShowError(true);
   }, [episodeId]);
-
-  const getErrorMessage = (err: any) => {
-    if (!err) return "Failed to retrieve video stream. Please try again later.";
-    if (typeof err === "string") return err;
-    if (err.response?.data?.message) {
-      const msg = err.response.data.message;
-      return Array.isArray(msg) ? msg.join(", ") : msg;
-    }
-    return err.message || "An unexpected error occurred.";
-  };
 
   useEffect(() => {
     if (episode?.video.id) {
@@ -359,16 +352,36 @@ export default function TVSeriesVideoContent({
               Playback Error
             </AlertDialogTitle>
             <AlertDialogDescription className="text-zinc-400 text-sm mt-2">
-              {getErrorMessage(accessError)}
+              {getFriendlyErrorMessage(accessError)}
             </AlertDialogDescription>
           </AlertDialogHeader>
-          <AlertDialogFooter className="flex justify-end mt-4 w-full">
-            <AlertDialogAction
-              onClick={() => setShowError(false)}
-              className="w-full sm:w-auto bg-orange-500 hover:bg-orange-600 text-white font-semibold transition-colors"
-            >
-              Dismiss
-            </AlertDialogAction>
+          <AlertDialogFooter className="flex flex-col sm:flex-row gap-2 mt-4 w-full justify-end">
+            {isAuthError(accessError) ? (
+              <>
+                <AlertDialogAction
+                  onClick={() => setShowError(false)}
+                  className="w-full sm:w-auto bg-zinc-900 hover:bg-zinc-800 text-zinc-300 border border-zinc-800 font-semibold"
+                >
+                  Cancel
+                </AlertDialogAction>
+                <AlertDialogAction
+                  onClick={() => {
+                    setShowError(false);
+                    openLoginModal();
+                  }}
+                  className="w-full sm:w-auto bg-orange-500 hover:bg-orange-600 text-white font-semibold transition-colors"
+                >
+                  Sign In
+                </AlertDialogAction>
+              </>
+            ) : (
+              <AlertDialogAction
+                onClick={() => setShowError(false)}
+                className="w-full sm:w-auto bg-orange-500 hover:bg-orange-600 text-white font-semibold transition-colors"
+              >
+                Dismiss
+              </AlertDialogAction>
+            )}
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
