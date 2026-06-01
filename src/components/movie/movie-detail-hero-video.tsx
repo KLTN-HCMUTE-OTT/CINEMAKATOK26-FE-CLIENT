@@ -11,6 +11,8 @@ import { useWatchProgress } from "@/hooks/use-watch-progress";
 import { videosControllerGetVideoById } from "@/apis/api/videos";
 import MovieVideoPlayerComponent from "../ui/video-player/movie-video-player";
 import useVideoAccess from "@/hooks/use-video-access";
+import { useUIStore } from "@/store";
+import { isAuthError, getFriendlyErrorMessage } from "@/lib/error-mapper";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -46,6 +48,7 @@ export function MovieDetailHeroVideo({
 }: MovieDetailHeroVideoProps) {
   const [viewMode, setViewMode] = useState<ViewMode>("idle");
   const [selectedSource, setSelectedSource] = useState(0);
+  const openLoginModal = useUIStore((s) => s.openLoginModal);
   const [showResumeDialog, setShowResumeDialog] = useState(false);
   const [videoDuration, setVideoDuration] = useState(0);
   const [skipInitialTime, setSkipInitialTime] = useState(false);
@@ -114,15 +117,6 @@ export function MovieDetailHeroVideo({
       : { s3KeyStream: videoSources?.url || "" }
   );
 
-  const getErrorMessage = (err: any) => {
-    if (!err) return "Failed to retrieve video stream. Please try again later.";
-    if (typeof err === "string") return err;
-    if (err.response?.data?.message) {
-      const msg = err.response.data.message;
-      return Array.isArray(msg) ? msg.join(", ") : msg;
-    }
-    return err.message || "An unexpected error occurred.";
-  };
   return (
     <div className="relative w-full bg-black">
       {/* Video Container */}
@@ -284,24 +278,46 @@ export function MovieDetailHeroVideo({
               Playback Error
             </AlertDialogTitle>
             <AlertDialogDescription className="text-zinc-400 text-sm mt-2">
-              {getErrorMessage(accessError)}
+              {getFriendlyErrorMessage(accessError)}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter className="flex flex-col sm:flex-row gap-2 mt-4 w-full justify-end">
-            {trailerUrl && (
-              <AlertDialogAction
-                onClick={() => setViewMode("trailer")}
-                className="w-full sm:w-auto bg-zinc-900 hover:bg-zinc-800 text-zinc-300 border border-zinc-800 font-semibold"
-              >
-                Watch Trailer
-              </AlertDialogAction>
+            {isAuthError(accessError) ? (
+              <>
+                <AlertDialogAction
+                  onClick={() => setViewMode("idle")}
+                  className="w-full sm:w-auto bg-zinc-900 hover:bg-zinc-800 text-zinc-300 border border-zinc-800 font-semibold"
+                >
+                  Cancel
+                </AlertDialogAction>
+                <AlertDialogAction
+                  onClick={() => {
+                    setViewMode("idle");
+                    openLoginModal();
+                  }}
+                  className="w-full sm:w-auto bg-orange-500 hover:bg-orange-600 text-white font-semibold transition-colors"
+                >
+                  Sign In
+                </AlertDialogAction>
+              </>
+            ) : (
+              <>
+                {trailerUrl && (
+                  <AlertDialogAction
+                    onClick={() => setViewMode("trailer")}
+                    className="w-full sm:w-auto bg-zinc-900 hover:bg-zinc-800 text-zinc-300 border border-zinc-800 font-semibold"
+                  >
+                    Watch Trailer
+                  </AlertDialogAction>
+                )}
+                <AlertDialogAction
+                  onClick={() => setViewMode("idle")}
+                  className="w-full sm:w-auto bg-orange-500 hover:bg-orange-600 text-white font-semibold transition-colors"
+                >
+                  Dismiss
+                </AlertDialogAction>
+              </>
             )}
-            <AlertDialogAction
-              onClick={() => setViewMode("idle")}
-              className="w-full sm:w-auto bg-orange-500 hover:bg-orange-600 text-white font-semibold transition-colors"
-            >
-              Dismiss
-            </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
