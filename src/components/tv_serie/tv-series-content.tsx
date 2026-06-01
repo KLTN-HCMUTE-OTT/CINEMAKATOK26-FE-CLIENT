@@ -8,7 +8,7 @@ import { EpisodeCardList } from "./card/episode-card";
 import useVideoAccess from "@/hooks/use-video-access";
 import { useWatchProgress } from "@/hooks/use-watch-progress";
 import { useUIStore } from "@/store";
-import { isAuthError, getFriendlyErrorMessage } from "@/lib/error-mapper";
+import { isUnauthenticatedError, isPermissionError, getFriendlyErrorMessage } from "@/lib/error-mapper";
 import { videosControllerGetVideoById } from "@/apis/api/videos";
 import { MoreTVSeriesSection } from "./section/more-tv-series-section";
 import { DetailInfoSection } from "./section/detail-info-section";
@@ -61,10 +61,22 @@ export default function TVSeriesVideoContent({
   );
 
   const [showError, setShowError] = useState(true);
+  // pendingWatch: set to true when user clicks "Sign In" from the error dialog.
+  // Once login succeeds and query refetches with videoContent, the player auto-shows.
+  const [pendingWatch, setPendingWatch] = useState(false);
 
   useEffect(() => {
     setShowError(true);
+    setPendingWatch(false);
   }, [episodeId]);
+
+  // Auto-show player after login: when videoContent arrives and user was pending
+  useEffect(() => {
+    if (pendingWatch && videoContent && !isAccessLoading) {
+      setPendingWatch(false);
+      setShowError(false);
+    }
+  }, [pendingWatch, videoContent, isAccessLoading]);
 
   useEffect(() => {
     if (episode?.video.id) {
@@ -356,7 +368,8 @@ export default function TVSeriesVideoContent({
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter className="flex flex-col sm:flex-row gap-2 mt-4 w-full justify-end">
-            {isAuthError(accessError) ? (
+            {isUnauthenticatedError(accessError) ? (
+              // 401: Not logged in → offer Sign In
               <>
                 <AlertDialogAction
                   onClick={() => setShowError(false)}
@@ -367,6 +380,7 @@ export default function TVSeriesVideoContent({
                 <AlertDialogAction
                   onClick={() => {
                     setShowError(false);
+                    setPendingWatch(true);
                     openLoginModal();
                   }}
                   className="w-full sm:w-auto bg-orange-500 hover:bg-orange-600 text-white font-semibold transition-colors"
@@ -374,7 +388,16 @@ export default function TVSeriesVideoContent({
                   Sign In
                 </AlertDialogAction>
               </>
+            ) : isPermissionError(accessError) ? (
+              // 403: Logged in but no subscription/permission → just Dismiss
+              <AlertDialogAction
+                onClick={() => setShowError(false)}
+                className="w-full sm:w-auto bg-orange-500 hover:bg-orange-600 text-white font-semibold transition-colors"
+              >
+                Dismiss
+              </AlertDialogAction>
             ) : (
+              // Other errors → Dismiss
               <AlertDialogAction
                 onClick={() => setShowError(false)}
                 className="w-full sm:w-auto bg-orange-500 hover:bg-orange-600 text-white font-semibold transition-colors"

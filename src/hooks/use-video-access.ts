@@ -7,6 +7,7 @@ import {
   streamingControllerGetDrmKeyInfo,
 } from "@/apis/api/streaming";
 import { queryKeys } from "@/lib/query-keys";
+import { useAuthStore } from "@/store";
 
 const HLS_MIME_TYPE = "application/x-mpegURL";
 const DASH_MIME_TYPE = "application/dash+xml";
@@ -55,11 +56,12 @@ const useVideoAccess = (arg: string | UseVideoAccessProps) => {
 
   const cleanedS3Key = s3KeyStream ? cleanFileUrl(s3KeyStream) : "";
   const s3FileKey = cleanedS3Key ? encodeURIComponent(cleanedS3Key) : "";
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
 
   const { data: videoContent, isLoading, error } = useQuery({
     queryKey: videoId
-      ? ["videoAccess", "drm", videoId]
-      : ["videoAccess", "public", s3FileKey],
+      ? ["videoAccess", "drm", videoId, isAuthenticated]
+      : ["videoAccess", "public", s3FileKey, isAuthenticated],
     queryFn: async () => {
       if (videoId) {
         // Step 1: Get signed manifest URL and trigger cookie setting via API Gateway
@@ -105,6 +107,12 @@ const useVideoAccess = (arg: string | UseVideoAccessProps) => {
       return null;
     },
     staleTime: 5 * 60 * 1000, // 5 minutes
+    retry: (failureCount, error) => {
+      // Don't retry on 401/403 — user needs to login or subscribe
+      const status = (error as any)?.response?.status;
+      if (status === 401 || status === 403) return false;
+      return failureCount < 2;
+    },
     enabled: !!videoId || !!s3KeyStream,
   });
 

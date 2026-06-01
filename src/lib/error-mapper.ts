@@ -22,18 +22,15 @@ const ERROR_MESSAGE_MAPPING: ErrorMap = {
 };
 
 /**
- * Checks if the error is an authentication/authorization error.
+ * Checks if the error is a NOT-AUTHENTICATED error (401).
+ * The user needs to log in.
  */
-export const isAuthError = (err: any): boolean => {
+export const isUnauthenticatedError = (err: any): boolean => {
   if (!err) return false;
-  
-  // HTTP status codes indicating authentication/authorization failure
-  if (err.response?.status === 401 || err.response?.status === 403) {
-    return true;
-  }
+
+  if (err.response?.status === 401) return true;
 
   const rawMsg = getRawErrorMessage(err).toLowerCase();
-  
   return (
     rawMsg.includes("token") ||
     rawMsg.includes("unauthorized") ||
@@ -44,17 +41,44 @@ export const isAuthError = (err: any): boolean => {
 };
 
 /**
+ * Checks if the error is a PERMISSION/SUBSCRIPTION error (403).
+ * The user is logged in but does not have the required subscription or access.
+ */
+export const isPermissionError = (err: any): boolean => {
+  if (!err) return false;
+
+  if (err.response?.status === 403) return true;
+
+  const rawMsg = getRawErrorMessage(err).toLowerCase();
+  return (
+    rawMsg.includes("forbidden") ||
+    rawMsg.includes("subscription") ||
+    rawMsg.includes("permission") ||
+    rawMsg.includes("entitlement") ||
+    rawMsg.includes("access denied")
+  );
+};
+
+/**
+ * @deprecated Use isUnauthenticatedError() or isPermissionError() instead.
+ * Kept for backwards compatibility — returns true for EITHER 401 or 403.
+ */
+export const isAuthError = (err: any): boolean => {
+  return isUnauthenticatedError(err) || isPermissionError(err);
+};
+
+/**
  * Extracts the raw message string from any error object.
  */
 export const getRawErrorMessage = (err: any): string => {
   if (!err) return "";
   if (typeof err === "string") return err;
-  
+
   if (err.response?.data?.message) {
     const msg = err.response.data.message;
     return Array.isArray(msg) ? msg.join(", ") : String(msg);
   }
-  
+
   return err.message || "";
 };
 
@@ -80,7 +104,7 @@ export const getFriendlyErrorMessage = (
 
   // Check exact mapping or substring mapping
   const lowerMsg = rawMsg.toLowerCase().trim();
-  
+
   for (const [key, friendlyValue] of Object.entries(ERROR_MESSAGE_MAPPING)) {
     if (lowerMsg === key || lowerMsg.includes(key)) {
       return friendlyValue;

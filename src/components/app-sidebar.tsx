@@ -15,7 +15,7 @@ import { useCategories } from "@/hooks/use-categories";
 interface AppSidebarProps {
   type?: string;
 }
-export function AppSidebar({ type }: AppSidebarProps) {
+export function AppSidebar({ type = "movies" }: AppSidebarProps) {
   const pathname = usePathname();
   const [isOpen, setIsOpen] = useState(false);
   const { categories, isLoading, error } = useCategories();
