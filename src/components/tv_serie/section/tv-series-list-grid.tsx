@@ -18,9 +18,9 @@ interface Props {
 }
 
 const TITLE_MAP: Record<string, string> = {
-  all: "Tất cả phim",
-  trending: "Phim đang thịnh hành",
-  category: "Phim theo thể loại",
+  all: "All TV Series",
+  trending: "Trending TV Series",
+  category: "TV Series by Category",
 };
 
 export default function TvSeriesListGrid({ type = "all", categoryId }: Props) {

@@ -16,10 +16,10 @@ interface Props {
 }
 
 const TITLE_MAP: Record<string, string> = {
-  all: "Tất cả phim",
-  trending: "Phim đang thịnh hành",
-  "new-release": "Phim mới phát hành",
-  category: "Phim theo thể loại",
+  all: "All Movies",
+  trending: "Trending Movies",
+  "new-release": "New Releases",
+  category: "Movies by Category",
 };
 
 export default function MovieListGrid({ type = "all", categoryId }: Props) {
