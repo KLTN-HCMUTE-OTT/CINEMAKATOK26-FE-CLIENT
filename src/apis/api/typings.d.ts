@@ -146,9 +146,9 @@ declare namespace API {
     /** Session ID to group actions into transactions for recommendation engine */
     sessionId: string;
     /** Action performed */
-    action: string;
+    action: Record<string, any>;
     /** Type of resource the action was performed on */
-    resourceType?: string;
+    resourceType?: Record<string, any>;
     /** ID of the resource the action was performed on */
     resourceId?: string;
     /** Signal weight for recommendation engine (2=strong, 1=medium, -1=negative, 0=ignored) */
@@ -511,7 +511,7 @@ declare namespace API {
     /** Birth date of the actor */
     dateOfBirth: string;
     /** Gender of the actor */
-    gender: string;
+    gender: Record<string, any>;
     /** Biography of the actor */
     bio: string;
     /** Profile picture of the actor */
@@ -712,7 +712,7 @@ declare namespace API {
     /** Birth date of the actor */
     dateOfBirth: string;
     /** Gender of the actor */
-    gender: string;
+    gender: Record<string, any>;
     /** Biography of the actor */
     bio: string;
     /** Profile picture of the actor */
@@ -1259,7 +1259,7 @@ declare namespace API {
     /** Name of the user who performed the action */
     userName: string;
     /** Action performed */
-    action: string;
+    action: Record<string, any>;
     /** Description of the action */
     description: string;
   };
@@ -1915,7 +1915,7 @@ declare namespace API {
     /** Birth date of the actor */
     dateOfBirth: string;
     /** Gender of the actor */
-    gender: string;
+    gender: Record<string, any>;
     /** Biography of the actor */
     bio: string;
     /** Profile picture of the actor */

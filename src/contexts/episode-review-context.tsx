@@ -4,6 +4,7 @@
 import React, { createContext, useContext, useState } from "react";
 import {
   useEpisodeReviewsQuery,
+  useMyEpisodeReviewQuery,
   useSubmitEpisodeReviewMutation,
   useDeleteEpisodeReviewMutation,
 } from "@/hooks/use-episode-reviews";
@@ -11,7 +12,6 @@ import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { useUIStore } from "@/store";
 import { isAuthenticated } from "@/lib/auth";
-import { queryKeys } from "@/lib/query-keys";
 
 interface EpisodeReviewContextType {
   // Reviews
@@ -50,11 +50,12 @@ export function EpisodeReviewProvider({
 
   // Reviews — TanStack Query
   const reviewsQuery = useEpisodeReviewsQuery(episodeId, 1, sortOrder);
+  const myReviewQuery = useMyEpisodeReviewQuery(episodeId);
   const submitMutation = useSubmitEpisodeReviewMutation(episodeId);
   const deleteMutation = useDeleteEpisodeReviewMutation(episodeId);
 
   const allReviews = reviewsQuery.data?.reviews ?? [];
-  const userReview = reviewsQuery.data?.userReview ?? null;
+  const userReview = myReviewQuery.data ?? null;
   const currentPage = reviewsQuery.data?.currentPage ?? 1;
   const totalPages = reviewsQuery.data?.totalPages ?? 1;
   const totalReviews = reviewsQuery.data?.totalReviews ?? 0;
@@ -66,7 +67,7 @@ export function EpisodeReviewProvider({
       toast.error("Please login to comment!");
       return;
     }
-    const userReviewId = userReview?.id;
+    const userReviewId = myReviewQuery.data?.id;
     await submitMutation.mutateAsync({ comment, userReviewId });
   };
 
@@ -97,12 +98,12 @@ export function EpisodeReviewProvider({
         },
         loadMoreReviews: async () => {
           await queryClient.invalidateQueries({
-            queryKey: queryKeys.episodeReviews.forEpisode(episodeId),
+            queryKey: ["episodeReviews", "episode", episodeId],
           });
         },
         goToPage: async (_page: number) => {
           await queryClient.invalidateQueries({
-            queryKey: queryKeys.episodeReviews.forEpisode(episodeId),
+            queryKey: ["episodeReviews", "episode", episodeId],
           });
         },
       }}

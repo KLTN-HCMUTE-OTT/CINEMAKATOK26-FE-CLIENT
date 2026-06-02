@@ -58,7 +58,7 @@ export function useEpisodeReviewReplies(episodeReviewId: string) {
 
   const invalidateAll = () => {
     queryClient.invalidateQueries({
-      queryKey: queryKeys.replies.forEpisodeReview(episodeReviewId),
+      queryKey: queryKeys.replies.forEpisodeReview(episodeReviewId, 1),
     });
     queryClient.invalidateQueries({
       queryKey: queryKeys.replies.episodeCount(episodeReviewId),

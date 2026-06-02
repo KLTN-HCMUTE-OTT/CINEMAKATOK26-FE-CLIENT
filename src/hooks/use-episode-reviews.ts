@@ -9,12 +9,39 @@ import {
   episodeReviewControllerDeleteReview,
 } from "@/apis/api/episodeReviews";
 import { toast } from "sonner";
-import { useUIStore } from "@/store";
+import { useUIStore, useAuthStore } from "@/store";
 import { isAuthenticated } from "@/lib/auth";
 import { queryKeys } from "@/lib/query-keys";
 import { useState } from "react";
 
 const REVIEWS_PER_PAGE = 10;
+
+/**
+ * Query hook for fetching the current user's own review for this episode
+ */
+export function useMyEpisodeReviewQuery(episodeId: string) {
+  return useQuery({
+    queryKey: queryKeys.episodeReviews.userReview(
+      episodeId,
+      useAuthStore.getState().user?.id,
+    ),
+    queryFn: async () => {
+      if (!isAuthenticated()) return null;
+      const currentUserId = useAuthStore.getState().user?.id;
+      if (!currentUserId) return null;
+      const response = await episodeReviewControllerGetReviewForEpisode({
+        episodeId,
+        userId: currentUserId,
+        limit: 1,
+        page: 1,
+      } as any);
+      const reviews = response?.data?.data || [];
+      return (reviews[0] as API.EpisodeReviewDto) ?? null;
+    },
+    enabled: !!episodeId && isAuthenticated(),
+    staleTime: 30 * 1000,
+  });
+}
 
 /**
  * Query hook for fetching episode reviews
@@ -45,13 +72,11 @@ export function useEpisodeReviewsQuery(
       // Find user's review if logged in
       let userReview: API.EpisodeReviewDto | null = null;
       if (isAuthenticated()) {
-        const userName = JSON.parse(
-          localStorage.getItem("user") || "{}",
-        )?.name;
+        const currentUserId = useAuthStore.getState().user?.id;
         const myReview = reviews.find(
-          (r: API.EpisodeReviewDto) => r.name === userName,
-        );
-        if (myReview) userReview = myReview;
+          (r: any) => r.userId === currentUserId,
+        ) ?? null;
+        userReview = myReview;
       }
 
       return {
@@ -101,7 +126,10 @@ export function useSubmitEpisodeReviewMutation(episodeId: string) {
           : "Comment submitted successfully",
       );
       queryClient.invalidateQueries({
-        queryKey: queryKeys.episodeReviews.forEpisode(episodeId),
+        queryKey: ["episodeReviews", "episode", episodeId],
+      });
+      queryClient.invalidateQueries({
+        queryKey: ["episodeReviews", "userReview", episodeId],
       });
     },
     onError: (err: any) => {
@@ -130,7 +158,10 @@ export function useDeleteEpisodeReviewMutation(episodeId: string) {
     onSuccess: () => {
       toast.success("Comment deleted successfully");
       queryClient.invalidateQueries({
-        queryKey: queryKeys.episodeReviews.forEpisode(episodeId),
+        queryKey: ["episodeReviews", "episode", episodeId],
+      });
+      queryClient.invalidateQueries({
+        queryKey: ["episodeReviews", "userReview", episodeId],
       });
     },
     onError: (err: any) => {
@@ -152,11 +183,12 @@ export function useEpisodeReview(episodeId: string) {
   const queryClient = useQueryClient();
 
   const reviewsQuery = useEpisodeReviewsQuery(episodeId, 1, sortOrder);
+  const myReviewQuery = useMyEpisodeReviewQuery(episodeId);
   const submitMutation = useSubmitEpisodeReviewMutation(episodeId);
   const deleteMutation = useDeleteEpisodeReviewMutation(episodeId);
 
   return {
-    userReview: reviewsQuery.data?.userReview ?? null,
+    userReview: myReviewQuery.data ?? null,
     allReviews: reviewsQuery.data?.reviews ?? [],
     reviewsLoading: reviewsQuery.isLoading,
     currentPage: reviewsQuery.data?.currentPage ?? 1,
@@ -171,7 +203,7 @@ export function useEpisodeReview(episodeId: string) {
         toast.error("Please login to comment!");
         return;
       }
-      const userReviewId = reviewsQuery.data?.userReview?.id;
+      const userReviewId = myReviewQuery.data?.id;
       await submitMutation.mutateAsync({ comment, userReviewId });
     },
     deleteReview: async (reviewId: string) => {
