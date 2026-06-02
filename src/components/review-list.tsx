@@ -13,7 +13,6 @@ import { ReportDialog } from "@/components/ui/report-dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { ReplyItem } from "@/components/reply-item";
 import { useReviewReplies } from "@/hooks/use-review-replies";
-import { reviewReplyControllerCreateReply } from "@/apis/api/reviewReplies";
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
 import { useUIStore } from "@/store";
@@ -48,20 +47,14 @@ function ReviewWithReplies({
     updateReply,
     deleteReply,
     fetchReplies,
-    fetchReplyCount,
   } = useReviewReplies(review.id);
 
-  // Fetch reply count on mount
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
-    fetchReplyCount();
-  }, [fetchReplyCount]);
-
-  // Fetch full replies when expanding
-  useEffect(() => {
-    if (showReplies && replies.length === 0) {
+    if (showReplies && replies.length === 0 && !repliesLoading && !isRefreshing) {
       fetchReplies(1);
     }
-  }, [showReplies, replies.length, fetchReplies]);
+  }, [showReplies, replies.length, repliesLoading, isRefreshing]);
 
   const handleReplyClick = () => {
     if (!currentUserId) {
@@ -91,29 +84,15 @@ function ReviewWithReplies({
 
   const handleNestedReply = async (parentReplyId: string, content: string) => {
     try {
-      // Call API directly without hook to avoid refreshing all top-level replies
-      // This allows child components to manage their own nested replies state
-      const response = await reviewReplyControllerCreateReply({
-        content,
-        reviewId: review.id,
-        parentReplyId,
+      await createReply(content, parentReplyId);
+      setShowReplies(true);
+      setExpandedReplies((prev) => {
+        const next = new Set(prev);
+        next.add(parentReplyId);
+        return next;
       });
-
-      const data = (response as any).data;
-      if (data?.data) {
-        toast.success("Reply added successfully");
-        setShowReplies(true);
-        // Auto-expand the parent reply to show the new nested reply
-        setExpandedReplies((prev) => {
-          const next = new Set(prev);
-          next.add(parentReplyId);
-          return next;
-        });
-        return data.data;
-      }
     } catch (error) {
       console.error("Error submitting nested reply:", error);
-      toast.error("Failed to submit reply");
       throw error;
     }
   };

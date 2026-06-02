@@ -63,7 +63,6 @@ export function RatingDialog({
       try {
         setIsSubmitting(true);
         await submitReview(rating, review.trim());
-        onClose();
       } catch (err) {
         // Error is handled in context
         console.error("Submit error:", err);
@@ -118,7 +117,7 @@ export function RatingDialog({
         <div className="flex flex-col h-full">
           {/* Header */}
           <div className="flex items-center justify-between p-4 border-b border-gray-700">
-            <h2 className="text-xl font-semibold text-white">Đánh giá phim</h2>
+            <h2 className="text-xl font-semibold text-white">Review</h2>
             <button
               onClick={onClose}
               onKeyDown={handleKeyDown}
@@ -134,7 +133,7 @@ export function RatingDialog({
             <div className="mb-6">
               <div className="flex items-center justify-between mb-3">
                 <label className="block text-sm font-medium text-gray-300">
-                  {userReview ? "Chỉnh sửa đánh giá" : "Đánh giá của bạn"}
+                  {userReview ? "Edit Review" : "Your Review"}
                 </label>
                 {userReview && (
                   <button
@@ -144,7 +143,7 @@ export function RatingDialog({
                     className="text-red-400 hover:text-red-300 transition-colors flex items-center gap-1 text-sm"
                   >
                     <Trash2 className="w-4 h-4" />
-                    Xóa
+                    Delete
                   </button>
                 )}
               </div>
@@ -177,14 +176,14 @@ export function RatingDialog({
             {/* Review Text */}
             <div className="mb-6">
               <label className="block text-sm font-medium text-gray-300 mb-3">
-                Nhận xét <span className="text-gray-500">(không bắt buộc)</span>
+                Review <span className="text-gray-500">(optional)</span>
               </label>
               <Textarea
                 value={review}
                 onChange={(e) => setReview(e.target.value)}
                 onKeyDown={handleKeyDown}
                 disabled={isSubmitting}
-                placeholder="Chia sẻ suy nghĩ của bạn về bộ phim..."
+                placeholder="Share your thoughts about the movie..."
                 className="min-h-[120px] bg-gray-800 border-gray-700 text-white placeholder:text-gray-500 focus:border-purple-500 disabled:opacity-50"
               />
             </div>
@@ -195,7 +194,7 @@ export function RatingDialog({
             {/* All Reviews Section */}
             <div>
               <h3 className="text-lg font-semibold text-white mb-4">
-                Đánh giá từ người dùng ({totalReviews})
+                Reviews from Users ({totalReviews})
               </h3>
 
               <div className="max-h-[500px] overflow-y-auto pr-2">
@@ -226,7 +225,7 @@ export function RatingDialog({
               disabled={isSubmitting}
               className="flex-1 border-gray-700 text-white hover:bg-gray-800"
             >
-              {userReview || allReviews.length > 0 ? "Đóng" : "Hủy"}
+              {userReview || allReviews.length > 0 ? "Close" : "Cancel"}
             </Button>
             <Button
               onClick={handleSubmit}
@@ -235,10 +234,10 @@ export function RatingDialog({
               className="flex-1 bg-purple-600 hover:bg-purple-700 text-white disabled:opacity-50"
             >
               {isSubmitting
-                ? "Đang gửi..."
+                ? "Submitting..."
                 : userReview
-                ? "Cập nhật"
-                : "Gửi đánh giá"}
+                  ? "Update Review"
+                  : "Submit Review"}
             </Button>
           </div>
         </div>

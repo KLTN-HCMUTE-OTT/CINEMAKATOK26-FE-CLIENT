@@ -13,7 +13,6 @@ import { ReportDialog } from "@/components/ui/report-dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { CompactReplyItem } from "@/components/compact-reply-item";
 import { useReviewReplies } from "@/hooks/use-review-replies";
-import { reviewReplyControllerCreateReply } from "@/apis/api/reviewReplies";
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
 import { useUIStore } from "@/store";
@@ -53,15 +52,12 @@ function CompactReviewWithReplies({
     fetchReplyCount,
   } = useReviewReplies(review.id);
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
-    fetchReplyCount();
-  }, [fetchReplyCount]);
-
-  useEffect(() => {
-    if (showReplies && replies.length === 0) {
+    if (showReplies && replies.length === 0 && !repliesLoading && !isRefreshing) {
       fetchReplies(1);
     }
-  }, [showReplies, replies.length, fetchReplies]);
+  }, [showReplies, replies.length, repliesLoading, isRefreshing]);
 
   const handleReplyClick = () => {
     if (!currentUserId) {
@@ -90,26 +86,15 @@ function CompactReviewWithReplies({
 
   const handleNestedReply = async (parentReplyId: string, content: string) => {
     try {
-      const response = await reviewReplyControllerCreateReply({
-        content,
-        reviewId: review.id,
-        parentReplyId,
+      await createReply(content, parentReplyId);
+      setShowReplies(true);
+      setExpandedReplies((prev) => {
+        const next = new Set(prev);
+        next.add(parentReplyId);
+        return next;
       });
-
-      const data = (response as any).data;
-      if (data?.data) {
-        toast.success("Reply added successfully");
-        setShowReplies(true);
-        setExpandedReplies((prev) => {
-          const next = new Set(prev);
-          next.add(parentReplyId);
-          return next;
-        });
-        return data.data;
-      }
     } catch (error) {
       console.error("Error submitting nested reply:", error);
-      toast.error("Failed to submit reply");
       throw error;
     }
   };
