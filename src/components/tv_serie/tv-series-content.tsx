@@ -18,7 +18,8 @@ import { useRouter } from "next/navigation";
 import { getS3Url } from "@/hooks/aws";
 import { ResumeDialog } from "@/components/ui/resume-dialog";
 import { WatchPartyQuickButton } from "@/components/watch-party/watch-party-quick-button";
-import { AlertCircle } from "lucide-react";
+import { AlertCircle, Play } from "lucide-react";
+import Image from "next/image";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -46,6 +47,7 @@ export default function TVSeriesVideoContent({
   const [skipInitialTime, setSkipInitialTime] = useState(false);
   const [videoDetails, setVideoDetails] = useState<any>(null);
   const [showResumeDialog, setShowResumeDialog] = useState(false);
+  const [playerVisible, setPlayerVisible] = useState(false);
   // Fetch watch progress and resume data
   const { resumeData, isLoading: progressLoading } = useWatchProgress({
     videoId: episode?.video.id,
@@ -68,6 +70,9 @@ export default function TVSeriesVideoContent({
   useEffect(() => {
     setShowError(true);
     setPendingWatch(false);
+    setPlayerVisible(false);
+    setSkipInitialTime(false);
+    setShowResumeDialog(false);
   }, [episodeId]);
 
   // Auto-show player after login: when videoContent arrives and user was pending
@@ -75,6 +80,7 @@ export default function TVSeriesVideoContent({
     if (pendingWatch && videoContent && !isAccessLoading) {
       setPendingWatch(false);
       setShowError(false);
+      setPlayerVisible(true);
     }
   }, [pendingWatch, videoContent, isAccessLoading]);
 
@@ -88,12 +94,13 @@ export default function TVSeriesVideoContent({
     }
   }, [episode?.video.id]);
 
-  // Show resume dialog when resume data is available
-  useEffect(() => {
-    if (resumeData && resumeData.watchedDuration > 0 && !skipInitialTime) {
+  const handlePlayClick = () => {
+    if (resumeData && resumeData.watchedDuration > 0) {
       setShowResumeDialog(true);
+    } else {
+      setPlayerVisible(true);
     }
-  }, [resumeData, skipInitialTime]);
+  };
 
   const handleNextEpisode = () => {
     if (!tvSeries || !episode) return;
@@ -170,14 +177,14 @@ export default function TVSeriesVideoContent({
   const handleResume = () => {
     setShowResumeDialog(false);
     setSkipInitialTime(false);
-    // Video player will auto-seek to resumeData.watchedDuration via useWatchProgress hook
+    setPlayerVisible(true);
   };
 
   // Handle start over
   const handleStartOver = () => {
     setShowResumeDialog(false);
     setSkipInitialTime(true);
-    // Video player will start from 0
+    setPlayerVisible(true);
   };
   const categoryBreadcrumbs =
     tvSeries?.metaData.categories && tvSeries.metaData.categories.length > 0
@@ -225,7 +232,7 @@ export default function TVSeriesVideoContent({
                   Loading secure player...
                 </div>
               </div>
-            ) : videoContent ? (
+            ) : videoContent && playerVisible ? (
               <TVSeriesVideoPlayerComponent
                 src={videoContent.src}
                 type={videoContent.type}
@@ -239,9 +246,7 @@ export default function TVSeriesVideoContent({
                 vttFiles={videoDetails?.vttFiles}
                 violentSegments={videoDetails?.violentSegments}
                 nuditySegments={videoDetails?.nuditySegments}
-                onTimeUpdate={(currentTime) => {
-                  // Callback to update duration when available
-                }}
+                onTimeUpdate={() => {}}
                 episodeIndex={episode?.episodeNumber}
                 totalEpisodes={
                   tvSeries?.seasons.find((season) =>
@@ -251,6 +256,28 @@ export default function TVSeriesVideoContent({
                 onPrevEpisode={handlePrevEpisode}
                 onNextEpisode={handleNextEpisode}
               />
+            ) : videoContent && !playerVisible ? (
+              <div
+                className="relative w-full aspect-video rounded-2xl overflow-hidden shadow-2xl border border-gray-800 cursor-pointer group"
+                onClick={handlePlayClick}
+              >
+                <Image
+                  src={episode?.video.thumbnailUrl || "/default_banner.jpg"}
+                  alt={episode?.episodeTitle || "Episode"}
+                  fill
+                  className="object-cover"
+                  priority
+                />
+                <div className="absolute inset-0 bg-black/40 group-hover:bg-black/50 transition-colors" />
+                <div className="absolute inset-0 flex flex-col items-center justify-center gap-3">
+                  <button className="bg-orange-500/90 hover:bg-orange-600 text-white rounded-full p-5 shadow-2xl transition-all hover:scale-110">
+                    <Play className="w-10 h-10 fill-white" />
+                  </button>
+                  <span className="text-white text-sm font-semibold drop-shadow">
+                    {episode?.episodeTitle}
+                  </span>
+                </div>
+              </div>
             ) : (
               <div className="w-full aspect-video bg-black flex items-center justify-center rounded-2xl overflow-hidden border border-gray-800">
                 <div className="text-zinc-500 text-sm">Failed to retrieve video stream.</div>

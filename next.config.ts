@@ -22,6 +22,10 @@ const nextConfig = {
         protocol: "https",
         hostname: "placehold.co",
       },
+      {
+        protocol: "https",
+        hostname: "*.r2.dev",
+      },
     ],
     formats: ["image/avif", "image/webp"],
   },
