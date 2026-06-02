@@ -55,6 +55,8 @@ export const queryKeys = {
     all: ["episodeReviews"] as const,
     forEpisode: (episodeId: string, page?: number) =>
       [...queryKeys.episodeReviews.all, "episode", episodeId, page] as const,
+    userReview: (episodeId: string, userId?: string) =>
+      [...queryKeys.episodeReviews.all, "userReview", episodeId, userId] as const,
   },
 
   auth: {

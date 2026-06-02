@@ -233,6 +233,19 @@ export function ReplyItem({
     setIsReplying(!isReplying);
   };
 
+  const handleChildDelete = async (replyId: string) => {
+    await (onDelete(replyId) as unknown as Promise<void>);
+    setNestedReplies((prev) => prev.filter((r) => r.id !== replyId));
+    setFetchedReplyCount((prev) => (prev !== null ? Math.max(0, prev - 1) : null));
+  };
+
+  const handleChildEdit = async (replyId: string, content: string) => {
+    await (onEdit(replyId, content) as unknown as Promise<void>);
+    setNestedReplies((prev) =>
+      prev.map((r) => (r.id === replyId ? { ...r, content } : r)),
+    );
+  };
+
   const handleReplyCreatedInChild = (parentReplyId: string) => {
     console.log("[ReplyItem] handleReplyCreatedInChild called:", {
       myReplyId: reply.id,
@@ -472,8 +485,8 @@ export function ReplyItem({
               reply={childReply}
               currentUserId={currentUserId}
               onReply={onReply}
-              onEdit={onEdit}
-              onDelete={onDelete}
+              onEdit={handleChildEdit}
+              onDelete={handleChildDelete}
               formatDate={formatDate}
               depth={depth + 1}
               expandedReplyIds={expandedReplyIds}
