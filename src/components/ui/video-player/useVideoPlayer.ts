@@ -320,17 +320,13 @@ export function useVideoPlayer({
             }
           });
 
-          await player.load(src);
-          
+          await player.load(src, initialTime && initialTime > 0 ? initialTime : null);
+
           if (!active) return;
           setIsLoading(false);
 
           if (autoPlay) {
             video.play().catch((err: any) => console.log("Autoplay blocked:", err));
-          }
-
-          if (initialTime && initialTime > 0) {
-            video.currentTime = initialTime;
           }
 
         } catch (err: any) {

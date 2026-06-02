@@ -12,7 +12,11 @@ import { videosControllerGetVideoById } from "@/apis/api/videos";
 import MovieVideoPlayerComponent from "../ui/video-player/movie-video-player";
 import useVideoAccess from "@/hooks/use-video-access";
 import { useUIStore } from "@/store";
-import { isUnauthenticatedError, isPermissionError, getFriendlyErrorMessage } from "@/lib/error-mapper";
+import {
+  isUnauthenticatedError,
+  isPermissionError,
+  getFriendlyErrorMessage,
+} from "@/lib/error-mapper";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -112,10 +116,12 @@ export function MovieDetailHeroVideo({
     // Video player will start from 0
   };
 
-  const { videoContent, isLoading: isAccessLoading, error: accessError } = useVideoAccess(
-    videoId
-      ? { videoId }
-      : { s3KeyStream: videoSources?.url || "" }
+  const {
+    videoContent,
+    isLoading: isAccessLoading,
+    error: accessError,
+  } = useVideoAccess(
+    videoId ? { videoId } : { s3KeyStream: videoSources?.url || "" },
   );
 
   // When user logs in and the video query re-fetches successfully,
@@ -207,7 +213,9 @@ export function MovieDetailHeroVideo({
                   />
                 ) : (
                   <div className="w-full h-full flex items-center justify-center bg-black/90">
-                    <div className="text-zinc-500 text-sm">Failed to retrieve video stream.</div>
+                    <div className="text-zinc-500 text-sm">
+                      Failed to retrieve video stream.
+                    </div>
                   </div>
                 )}
               </div>
