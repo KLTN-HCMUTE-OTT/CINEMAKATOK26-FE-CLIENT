@@ -1,32 +1,37 @@
 "use client";
 
+import { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { useCategories } from "@/hooks/use-categories";
+import { useTrendingMovies } from "@/hooks/use-movies";
+
+const MOVIES_PER_PAGE = 3;
 
 export function MegaMenu() {
-  const movies = [
-    { title: "John Wick 4", image: "/john-wick-4-movie-poster.jpg" },
-    { title: "Spider Man Memo", image: "/spider-man-movie-poster.jpg" },
-    { title: "The White House", image: "/white-house-down-movie-poster.jpg" },
-  ];
-
   const { categories, isLoading, error } = useCategories();
+  const { result: trendingResult } = useTrendingMovies({ page: 1, limit: 12 });
+  const movies = trendingResult?.data ?? [];
+
+  const [movieOffset, setMovieOffset] = useState(0);
+  const visibleMovies = movies.slice(movieOffset, movieOffset + MOVIES_PER_PAGE);
+  const canGoPrev = movieOffset > 0;
+  const canGoNext = movieOffset + MOVIES_PER_PAGE < movies.length;
 
   // Determine message based on state
   const message = isLoading
     ? "Loading..."
     : error
-    ? "Error loading categories"
-    : categories.length === 0
-    ? "No categories available"
-    : "";
+      ? "Error loading categories"
+      : categories.length === 0
+        ? "No categories available"
+        : "";
 
   return (
     <div
       data-mega-menu
-      className="w-screen max-w-6xl mx-auto bg-white shadow-lg border border-gray-200 rounded-xl p-8 grid grid-cols-[1fr_1fr_1fr_1.5fr] gap-8"
+      className="w-max max-w-4xl mx-auto bg-white shadow-lg border border-gray-200 rounded-xl p-6 grid grid-cols-[auto_auto_auto] gap-10"
     >
       {/* POPULAR */}
       <div>
@@ -38,7 +43,6 @@ export function MegaMenu() {
             { label: "All Movies", slug: "all" },
             { label: "Trending Now", slug: "trending" },
             { label: "New Releases", slug: "new-release" },
-            { label: "Recommend", slug: "recommend" },
           ].map((item) => (
             <li key={item.slug}>
               <Link
@@ -78,31 +82,6 @@ export function MegaMenu() {
         </div>
       </div>
 
-      {/* COLLECTIONS */}
-      <div>
-        <h3 className="font-semibold text-gray-900 mb-6 text-sm uppercase tracking-wide">
-          Collections
-        </h3>
-        <ul className="space-y-3">
-          {[
-            "Actor’s Spotlight",
-            "Holiday Movies",
-            "New Trailers",
-            "Weekly Watchlist",
-            "TV Networks",
-          ].map((item) => (
-            <li key={item}>
-              <a
-                href="#"
-                className="text-gray-600 hover:text-purple-600 transition-colors text-sm"
-              >
-                {item}
-              </a>
-            </li>
-          ))}
-        </ul>
-      </div>
-
       {/* MOVIES OF THE DAY */}
       <div>
         <div className="flex items-center justify-between mb-6">
@@ -110,31 +89,43 @@ export function MegaMenu() {
             Movies of the Day
           </h3>
           <div className="flex space-x-2">
-            <button className="p-2 rounded-full bg-gray-100 hover:bg-gray-200 transition-colors">
+            <button
+              onClick={() => setMovieOffset((o) => Math.max(0, o - MOVIES_PER_PAGE))}
+              disabled={!canGoPrev}
+              className="p-2 rounded-full bg-gray-100 hover:bg-gray-200 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+            >
               <ChevronLeft className="w-4 h-4 text-gray-600" />
             </button>
-            <button className="p-2 rounded-full bg-gray-100 hover:bg-gray-200 transition-colors">
+            <button
+              onClick={() => canGoNext && setMovieOffset((o) => o + MOVIES_PER_PAGE)}
+              disabled={!canGoNext}
+              className="p-2 rounded-full bg-gray-100 hover:bg-gray-200 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+            >
               <ChevronRight className="w-4 h-4 text-gray-600" />
             </button>
           </div>
         </div>
 
         <div className="flex space-x-4 overflow-x-auto">
-          {movies.map((movie) => (
-            <div key={movie.title} className="flex-shrink-0 text-center">
+          {visibleMovies.map((movie) => (
+            <Link
+              key={movie.id}
+              href={`/movies/${movie.metaData.title}-${movie.id}`}
+              className="flex-shrink-0 text-center"
+            >
               <div className="w-28 h-40 rounded-lg overflow-hidden mb-2 shadow-md">
                 <Image
-                  src={movie.image || "/placeholder.svg"}
-                  alt={movie.title}
+                  src={movie.metaData.thumbnail || "/placeholder.svg"}
+                  alt={movie.metaData.title}
                   width={112}
                   height={160}
                   className="w-full h-full object-cover"
                 />
               </div>
               <p className="text-xs text-gray-700 font-medium leading-tight max-w-[112px]">
-                {movie.title}
+                {movie.metaData.title}
               </p>
-            </div>
+            </Link>
           ))}
         </div>
       </div>

@@ -18,7 +18,7 @@ import { MegaMenu } from "./mega-menu";
 export default function NavMenu() {
   const [openSection, setOpenSection] = React.useState<string | null>(null);
   const [openSubSection, setOpenSubSection] = React.useState<string | null>(
-    null
+    null,
   );
 
   const toggleSection = (section: string) => {
@@ -310,27 +310,12 @@ export default function NavMenu() {
 
         {/* Blog */}
         <div className="border-b border-gray-800">
-          <button
-            onClick={() => toggleSection("blog")}
+          <Link
+            href="/blog"
             className="w-full flex items-center justify-between px-4 py-3 text-white font-medium hover:bg-white/5 transition-colors"
           >
             <span>Blog</span>
-            <ChevronDown
-              className={`w-4 h-4 transition-transform ${
-                openSection === "blog" ? "rotate-180" : ""
-              }`}
-            />
-          </button>
-          {openSection === "blog" && (
-            <div className="pb-2">
-              <Link
-                href="/blog"
-                className="block px-4 py-2 text-sm text-gray-300 hover:text-white hover:bg-white/5 transition-colors"
-              >
-                Blog List
-              </Link>
-            </div>
-          )}
+          </Link>
         </div>
       </div>
 
@@ -342,18 +327,6 @@ export default function NavMenu() {
       >
         <NavigationMenuList className="space-x-2">
           {/* Home */}
-          <NavigationMenuItem>
-            <NavigationMenuTrigger className="bg-transparent text-white hover:text-purple-400 hover:bg-white/10">
-              Home
-            </NavigationMenuTrigger>
-            <NavigationMenuContent>
-              <ul className="grid w-56 gap-2 p-2">
-                <ListItem href="/" title="Home Default" />
-                <ListItem href="/home-v2" title="Home V2" />
-                <ListItem href="/home-v3" title="Home V3" />
-              </ul>
-            </NavigationMenuContent>
-          </NavigationMenuItem>
 
           <NavigationMenuItem>
             <NavigationMenuTrigger className="bg-transparent text-white hover:text-purple-400 hover:bg-white/10">
@@ -373,8 +346,6 @@ export default function NavMenu() {
               <ul className="grid w-56 gap-2 p-2">
                 <ListItem href="/movies" title="Movies" />
                 <ListItem href="/tv_series" title="TV Shows" />
-                <ListItem href="/documentaries" title="Documentaries" />
-                <ListItem href="/sports" title="Sports" />
               </ul>
             </NavigationMenuContent>
           </NavigationMenuItem>
@@ -384,12 +355,8 @@ export default function NavMenu() {
             <NavigationMenuLink asChild>
               <Link
                 href="/watch-party/rooms"
-                className="inline-flex items-center gap-2 px-3 py-2 text-sm font-medium text-white hover:text-purple-400 transition-colors rounded-md hover:bg-white/10"
+                className="inline-flex items-center gap-2 px-3 py-2 text-sm font-medium text-white transition-colors rounded-md hover:bg-white/10"
               >
-                <span className="relative flex h-2 w-2">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-purple-400 opacity-75" />
-                  <span className="relative inline-flex rounded-full h-2 w-2 bg-purple-500" />
-                </span>
                 Watch Party
               </Link>
             </NavigationMenuLink>
@@ -397,17 +364,14 @@ export default function NavMenu() {
 
           {/* Blog */}
           <NavigationMenuItem>
-            <NavigationMenuTrigger className="bg-transparent text-white hover:text-purple-400 hover:bg-white/10">
-              Blog
-            </NavigationMenuTrigger>
-            <NavigationMenuContent>
-              <ul className="grid w-48 gap-2 p-2">
-                <ListItem href="/blog" title="Blog List" />
-                <ListItem href="/blog/single" title="Blog Single" />
-                <ListItem href="/blog/category" title="Blog Category" />
-                <ListItem href="/blog/author" title="Blog Author" />
-              </ul>
-            </NavigationMenuContent>
+            <NavigationMenuLink asChild>
+              <Link
+                href="/blog"
+                className="inline-flex items-center gap-2 px-3 py-2 text-sm font-medium text-white transition-colors rounded-md hover:bg-white/10"
+              >
+                Blog
+              </Link>
+            </NavigationMenuLink>
           </NavigationMenuItem>
         </NavigationMenuList>
       </NavigationMenu>
