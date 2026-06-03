@@ -69,7 +69,7 @@ export function useSubmitReviewMutation(contentId: string) {
     onSuccess: () => {
       toast.success("Cảm ơn bạn đã đánh giá!");
       queryClient.invalidateQueries({
-        queryKey: queryKeys.reviews.forContent(contentId),
+        queryKey: [...queryKeys.reviews.all, "content", contentId],
       });
     },
     onError: (err: any) => {
@@ -109,7 +109,7 @@ export function useUpdateReviewMutation(contentId: string) {
     onSuccess: () => {
       toast.success("Cập nhật đánh giá thành công!");
       queryClient.invalidateQueries({
-        queryKey: queryKeys.reviews.forContent(contentId),
+        queryKey: [...queryKeys.reviews.all, "content", contentId],
       });
     },
     onError: (err: any) => {
@@ -133,7 +133,7 @@ export function useDeleteReviewMutation(contentId: string) {
     onSuccess: () => {
       toast.success("Xóa đánh giá thành công!");
       queryClient.invalidateQueries({
-        queryKey: queryKeys.reviews.forContent(contentId),
+        queryKey: [...queryKeys.reviews.all, "content", contentId],
       });
     },
     onError: (err: any) => {

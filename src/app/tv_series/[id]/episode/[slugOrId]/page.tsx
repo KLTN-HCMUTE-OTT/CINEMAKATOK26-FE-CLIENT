@@ -73,7 +73,7 @@ export default function TVSeriesVideoPage({ params }: Props) {
   if (error) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-gray-900 via-slate-900 to-black flex items-center justify-center px-4 text-center text-red-300">
-        Không thể tải thông tin tập phim. Vui lòng thử lại sau.
+        Can not load TV Series data. Please try again later.
       </div>
     );
   }
@@ -81,7 +81,7 @@ export default function TVSeriesVideoPage({ params }: Props) {
   if (!tvSeriesId || !result || !resolvedContentId) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-gray-900 via-slate-900 to-black flex items-center justify-center px-4 text-center text-gray-200">
-        Không tìm thấy dữ liệu TV Series.
+        TV Series not found. Please check the URL or try again later.
       </div>
     );
   }

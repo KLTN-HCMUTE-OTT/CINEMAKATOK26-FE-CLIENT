@@ -19,7 +19,7 @@ import {
 } from "@/hooks/use-reviews-management";
 import { toast } from "sonner";
 import { useUIStore } from "@/store";
-import { isAuthenticated } from "@/lib/auth";
+import { isAuthenticated, getCurrentUser } from "@/lib/auth";
 import { queryKeys } from "@/lib/query-keys";
 
 interface ActionsContextType {
@@ -85,11 +85,9 @@ export function ActionsProvider({ children, contentId }: ActionsProviderProps) {
   const allReviews = reviewsQuery.data?.reviews ?? [];
   let userReview: API.ReviewDto | null = null;
   if (isAuthenticated()) {
-    const userName = JSON.parse(
-      localStorage.getItem("user") || "{}",
-    )?.name;
+    const currentUserId = getCurrentUser()?.id;
     const myReview = allReviews.find(
-      (r: API.ReviewDto) => r.name === userName,
+      (r: API.ReviewDto) => r.userId === currentUserId,
     );
     if (myReview) userReview = myReview;
   }

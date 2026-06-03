@@ -4,6 +4,10 @@ const nextConfig = {
     remotePatterns: [
       {
         protocol: "https",
+        hostname: "pub-9ca10bb10ad245999227e7c277a725ec.r2.dev",
+      },
+      {
+        protocol: "https",
         hostname: "res.cloudinary.com",
       },
       {
@@ -21,6 +25,10 @@ const nextConfig = {
       {
         protocol: "https",
         hostname: "placehold.co",
+      },
+      {
+        protocol: "https",
+        hostname: "*.r2.dev",
       },
     ],
     formats: ["image/avif", "image/webp"],
