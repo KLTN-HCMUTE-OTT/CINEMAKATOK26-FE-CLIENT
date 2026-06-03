@@ -18,6 +18,7 @@ interface Movie {
   year: number;
   duration: string;
   description?: string;
+  accessTier?: string;
 }
 
 interface RecommendedMoviesSectionProps {
@@ -43,6 +44,7 @@ export function RecommendedMoviesSection({
       year: new Date(movie.metaData.releaseDate).getFullYear(),
       duration: String(movie.duration),
       description: movie.metaData.description,
+      accessTier: movie.metaData.accessTier,
     })) || [];
 
   return (
@@ -69,6 +71,7 @@ export function RecommendedMoviesSection({
               image={movie.imageUrl}
               description={movie.description || ""}
               type="movie"
+              accessTier={movie.accessTier}
             />
           )}
           slidesToShow={5}

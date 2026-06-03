@@ -45,14 +45,11 @@ export function WatchlistSection() {
     if (!isEditing || selectedIds.length === 0) return;
 
     try {
-      console.log("Deleting selected IDs:", selectedIds);
-      console.log("Current watchlist:", watchlist);
       // Get movieContentIds from selected ids
       const movieContentIds = watchlist
         .filter((movie) => selectedIds.includes(movie.id))
         .map((movie) => movie.movieContentId);
 
-      console.log("MovieContentIds to delete:", movieContentIds);
       await removeMultipleFromWatchlist(movieContentIds);
 
       setSelectedIds([]);

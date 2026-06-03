@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import Image from "next/image";
 import { Play, Info, Star } from "lucide-react";
+import { PremiumBadge, isPremiumContent } from "@/components/ui/premium-badge";
 import {
   Card,
   CardContent,
@@ -13,6 +14,7 @@ interface MovieCardProps {
   poster: string;
   title: string;
   rating: number;
+  accessTier?: string;
   onDetailClick?: () => void;
 }
 
@@ -20,6 +22,7 @@ export const MovieCard: React.FC<MovieCardProps> = ({
   poster,
   title,
   rating,
+  accessTier,
   onDetailClick,
 }) => {
   const [imgSrc, setImgSrc] = useState(poster);
@@ -50,6 +53,15 @@ export const MovieCard: React.FC<MovieCardProps> = ({
         <Star className="w-3 h-3 text-yellow-400 fill-yellow-400" />
         <span className="text-white text-xs font-medium">{rating}</span>
       </div>
+
+      {/* Premium Badge */}
+      {isPremiumContent(accessTier) && (
+        <PremiumBadge
+          size="sm"
+          showLabel
+          className="absolute top-3 right-3 z-10"
+        />
+      )}
 
       {/* Title */}
       <CardFooter className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent p-4">

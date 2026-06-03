@@ -13,6 +13,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { useMovieData } from "@/hooks/use-movies";
+import { PremiumBadge, isPremiumContent } from "@/components/ui/premium-badge";
 
 interface MovieCardProps {
   id: string;
@@ -27,6 +28,7 @@ interface MovieCardProps {
   hoveredIndex: number | null;
   onHover: (index: number | null) => void;
   isTvSeries?: boolean;
+  accessTier?: string;
 }
 
 export const ExpandingMovieCard = ({
@@ -42,6 +44,7 @@ export const ExpandingMovieCard = ({
   hoveredIndex,
   onHover,
   isTvSeries = false,
+  accessTier,
 }: MovieCardProps) => {
   const cardRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
@@ -141,6 +144,15 @@ export const ExpandingMovieCard = ({
 
         {/* Gradient overlay */}
         <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
+
+        {/* Premium badge */}
+        {isPremiumContent(accessTier) && (
+          <PremiumBadge
+            size="sm"
+            showLabel
+            className="absolute top-3 right-3 z-20"
+          />
+        )}
 
         {/* Nội dung */}
         <div className="relative z-10 flex h-full flex-col justify-end p-6 text-white">
@@ -268,6 +280,7 @@ export function MovieListCard({
       trailer: movie.metaData.trailer || "",
       imageUrl: movie.metaData.thumbnail || "/placeholder.jpg",
       backgroundUrl: movie.metaData.banner || "/placeholder.jpg",
+      accessTier: movie.metaData.accessTier,
     }));
   }, [currentData]);
 

@@ -39,8 +39,6 @@ function parseTime(timeStr: string): number {
 }
 
 function parseVTT(vttText: string, spriteUrl: string): Cue[] {
-  console.log("Parsing VTT with sprite:", spriteUrl);
-  console.log(vttText);
   const lines = vttText.split("\n");
   const cues: Cue[] = [];
   let i = 0;

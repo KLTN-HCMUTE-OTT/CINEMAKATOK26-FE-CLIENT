@@ -91,7 +91,6 @@ function TVSeriesPageContent({
         });
         // Tăng view count locally sau khi API thành công
         setViewCount((prev) => prev + 1);
-        console.log("View count increased for content:", metaData.id);
       } catch (err) {
         console.error("Error increasing view count:", err);
         // Không hiển thị error cho user vì đây là background operation
@@ -131,6 +130,7 @@ function TVSeriesPageContent({
               viewCount={viewCount}
               bannerUrl={metaData.thumbnail}
               trailerUrl={metaData.trailer}
+              accessTier={metaData.accessTier}
               isFavorited={isFavorited}
               totalFavorites={totalFavorites}
               isFavoriteLoading={isFavoriteLoading}

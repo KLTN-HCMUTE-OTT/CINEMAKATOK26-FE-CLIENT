@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { ButtonAction } from "@/components/ui/button-action";
 import { DialogTrailer } from "@/components/dialog-trailer";
 import { useRouter } from "next/navigation";
+import { PremiumBadge, isPremiumContent } from "@/components/ui/premium-badge";
 interface Props {
   id: string;
   title: string;
@@ -22,6 +23,7 @@ interface Props {
   viewCount: number;
   bannerUrl: string;
   trailerUrl?: string;
+  accessTier?: string;
   isFavorited: boolean;
   totalFavorites: number;
   isFavoriteLoading: boolean;
@@ -55,6 +57,7 @@ export default function TvSeriesBanner({
   toggleWatchlist,
   bannerUrl,
   trailerUrl,
+  accessTier,
   shareTitle,
   shareDescription,
   shareUrl,
@@ -86,7 +89,13 @@ export default function TvSeriesBanner({
         <div className="mb-2 text-indigo-400 font-semibold uppercase tracking-wide">
           {seasons} SEASONS AVAILABLE
         </div>
-        <h1 className="text-4xl font-bold mb-4">{title}</h1>
+        {/* Title + Premium badge */}
+        <div className="flex items-center gap-3 mb-4 flex-wrap">
+          <h1 className="text-4xl font-bold">{title}</h1>
+          {isPremiumContent(accessTier) && (
+            <PremiumBadge size="lg" showLabel />
+          )}
+        </div>
         <p className="mb-6 text-sm opacity-80">{description}</p>
         <div className="mb-8 flex gap-4 text-base opacity-80">
           {genres.map((genre) => (

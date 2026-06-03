@@ -14,6 +14,7 @@ import { Button } from "@/components/ui/button";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { WatchlistButton } from "@/components/watchlist-button";
+import { PremiumBadge, isPremiumContent } from "@/components/ui/premium-badge";
 
 interface HistoryCardProps {
   progress: API.WatchProgressDto;
@@ -76,7 +77,6 @@ export function HistoryCard({
     const contentType =
       progress.metadata?.type === "TVSERIES" ? "tv_series" : "movies";
     const Id = progress.movieId || progress.episodeId;
-    console.log("Navigating to detail page for ID:", Id);
     const title = progress.metadata?.title || "Unknown";
 
     if (Id && title) {
@@ -113,7 +113,6 @@ export function HistoryCard({
     const contentType =
       progress.metadata?.type === "TVSERIES" ? "tv_series" : "movies";
     const Id = progress.movieId || progress.episodeId;
-    console.log("Navigating to detail page for ID:", Id);
     const title = progress.metadata?.title || "Unknown";
 
     if (Id && title) {
@@ -219,6 +218,15 @@ export function HistoryCard({
         onMouseLeave={handleMouseLeave}
       >
         <div className="absolute inset-0 border border-white/10 bg-[#0f1326] overflow-hidden">
+          {/* Premium badge */}
+          {isPremiumContent(progress.metadata?.accessTier) && (
+            <PremiumBadge
+              size="sm"
+              showLabel
+              className="absolute top-3 left-3 z-20"
+            />
+          )}
+
           {/* Selection checkbox for edit mode */}
           {isEditing && (
             <div

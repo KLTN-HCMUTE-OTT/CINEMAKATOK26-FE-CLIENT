@@ -6,6 +6,7 @@ import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { Info, Volume2, VolumeX } from "lucide-react";
+import { PremiumBadge, isPremiumContent } from "@/components/ui/premium-badge";
 
 interface TvSeriesPopularCardProps {
   series: API.TVSeriesSummaryDto;
@@ -74,6 +75,14 @@ export function TvSeriesPopularCard({ series }: TvSeriesPopularCardProps) {
       >
         {/* Image/Video Section */}
         <div className="relative w-full aspect-[4/3] border border-white/10 bg-[#0f1326] overflow-hidden">
+          {/* Premium badge */}
+          {isPremiumContent(series.metaData.accessTier) && (
+            <PremiumBadge
+              size="sm"
+              showLabel
+              className="absolute top-2 right-2 z-30"
+            />
+          )}
           {/* Trailer iframe - chiếm toàn bộ phần ảnh */}
           {series.metaData.trailer && showDetails ? (
             <div className="absolute inset-0">

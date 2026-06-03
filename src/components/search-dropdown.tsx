@@ -6,6 +6,7 @@ import { Search, Clock, Play, X } from "lucide-react";
 import Image from "next/image";
 import { moviesControllerGetMovies } from "@/apis/api/movies";
 import { tvSeriesControllerGetTvSeries } from "@/apis/api/tvSeries";
+import { PremiumBadge, isPremiumContent } from "@/components/ui/premium-badge";
 
 interface SearchResult {
   id: string;
@@ -16,6 +17,7 @@ interface SearchResult {
   duration?: number;
   totalSeasons?: number;
   type: "movie" | "tv";
+  accessTier?: string;
 }
 
 interface SearchDropdownProps {
@@ -110,6 +112,7 @@ export function SearchDropdown({
             : undefined,
           duration: movie.duration,
           type: "movie" as const,
+          accessTier: movie.metaData.accessTier,
         }));
         const tvResults: SearchResult[] = (tvResponse.data.data || []).map(
           (tv: API.TVSeriesSummaryDto) => ({
@@ -119,6 +122,7 @@ export function SearchDropdown({
             description: tv.metaData.description,
             totalSeasons: tv.totalSeasons,
             type: "tv" as const,
+            accessTier: tv.metaData.accessTier,
           }),
         );
 
@@ -331,6 +335,10 @@ export function SearchDropdown({
                         <div className="w-full h-full flex items-center justify-center bg-gray-700">
                           <Play className="w-5 h-5 text-gray-500" />
                         </div>
+                      )}
+                      {/* Premium badge on poster thumbnail */}
+                      {isPremiumContent(result.accessTier) && (
+                        <PremiumBadge size="sm" className="absolute bottom-1 left-1 z-10" />
                       )}
                     </div>
 

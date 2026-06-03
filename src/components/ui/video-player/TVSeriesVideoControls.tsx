@@ -46,14 +46,6 @@ interface TVSeriesVideoControlsProps {
 }
 
 export function TVSeriesVideoControls(props: TVSeriesVideoControlsProps) {
-  // console.log(
-  //   "Rendering TVSeriesVideoControls with episodeIndex:",
-  //   props.episodeIndex
-  // );
-  // console.log(
-  //   "Rendering TVSeriesVideoControls with totalEpisodes:",
-  //   props.totalEpisodes
-  // );
   return (
     <div className="flex items-center justify-between gap-2 md:gap-4">
       {/* Left Controls */}

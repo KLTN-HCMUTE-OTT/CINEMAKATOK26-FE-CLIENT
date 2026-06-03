@@ -5,6 +5,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { Plus } from "lucide-react";
 import { WatchlistButton } from "@/components/watchlist-button";
+import { PremiumBadge, isPremiumContent } from "@/components/ui/premium-badge";
 
 interface PersonMovieCardProps {
   id: string;
@@ -15,6 +16,7 @@ interface PersonMovieCardProps {
   image: string;
   description?: string;
   type: "movie" | "tv";
+  accessTier?: string;
 }
 
 export function PersonMovieCard({
@@ -26,6 +28,7 @@ export function PersonMovieCard({
   image,
   description,
   type,
+  accessTier,
 }: PersonMovieCardProps) {
   const [isHovered, setIsHovered] = useState(false);
   const [imgSrc, setImgSrc] = useState(image || "/default_banner.jpg");
@@ -52,6 +55,15 @@ export function PersonMovieCard({
           className="object-cover"
           onError={() => setImgSrc("/default_banner.jpg")}
         />
+
+        {/* Premium badge */}
+        {isPremiumContent(accessTier) && (
+          <PremiumBadge
+            size="sm"
+            showLabel
+            className="absolute top-2 right-2 z-10"
+          />
+        )}
 
         {/* Hover Overlay with slide animation */}
         <div
