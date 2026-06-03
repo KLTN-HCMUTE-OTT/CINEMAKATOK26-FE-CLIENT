@@ -8,7 +8,7 @@ import { toast } from "sonner";
 import { useWatchPartyRoom } from "@/hooks/use-watch-party";
 import { useAuth } from "@/hooks/use-auth";
 import { useUIStore, useAuthStore } from "@/store";
-import { watchPartyAdminCloseRoom } from "@/apis/api/watchParty";
+import { watchPartyControllerAdminCloseRoom } from "@/apis/api/watchParty";
 import { RoomClosedDialog } from "@/components/watch-party/room-closed-dialog";
 import { KickedDialog } from "@/components/watch-party/kicked-dialog";
 
@@ -48,7 +48,7 @@ export default function WatchPartyRoomPage({ params }: PageProps) {
 
   const handleEndRoom = async () => {
     try {
-      await watchPartyAdminCloseRoom({ id: roomId });
+      await watchPartyControllerAdminCloseRoom({ id: roomId }, {});
       roomState.leaveRoom();
       router.push("/");
     } catch {
@@ -79,7 +79,7 @@ export default function WatchPartyRoomPage({ params }: PageProps) {
     authLoading ||
     (!roomState.room && !roomState.isClosed && !roomState.isKicked)
   ) {
-    console.log("Loading room state...", { authLoading, roomState });
+    //console.log("Loading room state...", { authLoading, roomState });
     return (
       <div className="min-h-screen bg-gray-950 flex items-center justify-center">
         <div className="flex flex-col items-center gap-3">

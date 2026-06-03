@@ -13,9 +13,18 @@ import {
   FastForward,
   Rewind,
 } from "lucide-react";
+import Link from "next/link";
+import { Lock as LockIcon, LogIn } from "lucide-react";
 import type { VideoState } from "@/types/watch-party";
-import { videosControllerGetVideoById } from "@/apis/api/videos";
+import useVideoAccess from "@/hooks/use-video-access";
+import { getAccessTokenInMemory } from "@/lib/request";
 import { env } from "@/env";
+import { useUIStore } from "@/store";
+import {
+  isUnauthenticatedError,
+  isPermissionError,
+  getFriendlyErrorMessage,
+} from "@/lib/error-mapper";
 
 const SYNC_THROTTLE_MS = 500;
 const DRIFT_TOLERANCE_SEC = 1.5;
@@ -56,6 +65,9 @@ export function SyncedVideoPlayer({
   const lastVideoIdRef = useRef<string | null>(null);
   const videoEndSentRef = useRef<string | null>(null);
   const hideTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const shakaPlayerRef = useRef<any>(null);
+  const destroyPromiseRef = useRef<Promise<void> | null>(null);
 
   // ── UI state ────────────────────────────────────────────────────────────
   const [isPlaying, setIsPlaying] = useState(false);
@@ -69,44 +81,148 @@ export function SyncedVideoPlayer({
   const [dragTime, setDragTime] = useState<number | null>(null);
   const [isProgressDragging, setIsProgressDragging] = useState(false);
 
-  // ── Load video URL when videoId changes ─────────────────────────────────
+  // ── Secure source: signed manifest + DRM key (gated per participant) ──────
+  const {
+    videoContent,
+    isLoading: isAccessLoading,
+    error: accessError,
+  } = useVideoAccess(
+    videoState?.videoId ? { videoId: videoState.videoId } : { videoId: "" }
+  );
+  const openLoginModal = useUIStore((s) => s.openLoginModal);
+
+  // ── Load the signed manifest via Shaka + ClearKey DRM ────────────────────
+  // Mirrors the Movie page secure flow (useVideoPlayer `isDash` branch): Shaka
+  // attaches to the same <video> element, so the sync effects below keep working.
   useEffect(() => {
     const video = videoRef.current;
-    if (!video || !videoState?.videoId) return;
+    const manifestUrl = videoContent?.src;
+    if (!video || !manifestUrl) return;
 
-    let cancelled = false;
+    let active = true;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    let shakaPlayer: any = null;
+    const licenseVideoId = videoState?.videoId || "";
 
-    const loadVideo = async () => {
+    const initPlayer = async () => {
+      // Await any teardown started by a previous run before re-attaching.
+      if (destroyPromiseRef.current) {
+        try {
+          await destroyPromiseRef.current;
+        } catch {
+          /* ignore */
+        }
+        destroyPromiseRef.current = null;
+      }
+      if (shakaPlayerRef.current) {
+        try {
+          await shakaPlayerRef.current.destroy();
+        } catch {
+          /* ignore */
+        }
+        shakaPlayerRef.current = null;
+      }
+
       try {
-        const res = await videosControllerGetVideoById({ id: videoState.videoId });
-        const videoUrl = res?.data?.data?.videoUrl;
-        if (!videoUrl || cancelled) return;
+        const shaka = (
+          await import("shaka-player/dist/shaka-player.compiled")
+        ).default;
+        if (!active) return;
 
-        const apiBase = env.NEXT_PUBLIC_API_URL.replace(/\/$/, "");
-        let src: string;
-        if (videoUrl.startsWith("http")) {
-          src = videoUrl;
-        } else if (videoUrl.startsWith("/")) {
-          src = `${apiBase}${videoUrl}`;
-        } else {
-          src = `${apiBase}/local-videos/${videoState.videoId}/dash/manifest.mpd`;
+        shaka.polyfill.installAll();
+        if (!shaka.Player.isBrowserSupported()) {
+          throw new Error("Browser not supported by Shaka Player");
         }
 
-        video.src = src;
-        video.load();
+        const player = new shaka.Player();
+        await player.attach(video);
+        if (!active) {
+          player.destroy();
+          return;
+        }
+        shakaPlayerRef.current = player;
+        shakaPlayer = player;
+
+        // Configure ClearKey DRM against the secure license endpoint.
+        const apiBaseUrl = env.NEXT_PUBLIC_API_URL;
+        const baseUrl = apiBaseUrl.endsWith("/") ? apiBaseUrl : `${apiBaseUrl}/`;
+        player.configure({
+          drm: {
+            servers: {
+              "org.w3.clearkey": `${baseUrl}api/v1/drm/license/clearkey`,
+            },
+          },
+        });
+
+        // Attach JWT bearer + videoId to the license request (per-participant gating).
+        player
+          .getNetworkingEngine()!
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          .registerRequestFilter((requestType: any, request: any) => {
+            if (requestType === shaka.net.NetworkingEngine.RequestType.LICENSE) {
+              const token = getAccessTokenInMemory();
+              if (token) {
+                request.headers["Authorization"] = `Bearer ${token}`;
+              }
+              request.headers["Content-Type"] = "application/json";
+              if (request.body) {
+                try {
+                  const body = JSON.parse(
+                    new TextDecoder().decode(request.body)
+                  );
+                  body.videoId = licenseVideoId;
+                  request.body = new TextEncoder().encode(JSON.stringify(body));
+                } catch (e) {
+                  console.error("Failed to parse license request body", e);
+                }
+              }
+            }
+          });
+
+        await player.load(manifestUrl);
       } catch (err) {
-        if (!cancelled) console.error("[SyncedVideoPlayer] Failed to load video:", err);
+        if (active) {
+          console.error("[SyncedVideoPlayer] Shaka init failed:", err);
+        }
       }
     };
 
-    loadVideo();
+    initPlayer();
 
     return () => {
-      cancelled = true;
+      active = false;
+      if (shakaPlayer) {
+        destroyPromiseRef.current = shakaPlayer.destroy();
+      } else if (shakaPlayerRef.current) {
+        destroyPromiseRef.current = shakaPlayerRef.current.destroy();
+        shakaPlayerRef.current = null;
+      }
     };
+  }, [videoContent?.src, videoContent?.drmKeyId, videoState?.videoId]);
+
+  // ── Reset to a clean paused state on video change ────────────────────────
+  // A switched-in video should start stopped with a "Play" control; the sync
+  // effect (viewers) or the host then drives playback from there.
+  useEffect(() => {
+    const video = videoRef.current;
+    if (video && !video.paused) video.pause();
+    setIsPlaying(false);
+    setCurrentTime(0);
+    setDuration(0);
+    setBuffered(0);
   }, [videoState?.videoId]);
 
   // ── Sync helpers ─────────────────────────────────────────────────────────
+  // Critical state changes (play/pause/seek) must always propagate — never let
+  // them be swallowed by the throttle that exists to tame `timeupdate` spam.
+  const emitSync = useCallback(
+    (state: { isPlaying: boolean; currentTime: number }) => {
+      lastSyncRef.current = Date.now();
+      onSync(state);
+    },
+    [onSync]
+  );
+
   const throttledSync = useCallback(
     (state: { isPlaying: boolean; currentTime: number }) => {
       const now = Date.now();
@@ -117,19 +233,23 @@ export function SyncedVideoPlayer({
     [onSync]
   );
 
-  // Apply server state → local player (viewers only — host/admin drive the player)
+  // Apply server state → local player (everyone tracks server state; canControl users also emit)
   useEffect(() => {
     const video = videoRef.current;
-    if (!video || !videoState || canControl) return;
+    if (!video || !videoState) return;
 
     if (videoState.videoId !== lastVideoIdRef.current) {
       lastVideoIdRef.current = videoState.videoId;
       videoEndSentRef.current = null;
     }
 
+    // Server timestamps (lastUpdatedAt / startedAt) are in milliseconds, so the
+    // elapsed time since the host's last update must be computed in ms then
+    // converted to seconds — mixing s and ms here corrupts the projected time.
     const expectedTime =
       videoState.isPlaying && videoState.startedAt
-        ? videoState.currentTime + (Date.now() / 1000 - videoState.lastUpdatedAt)
+        ? videoState.currentTime +
+          (Date.now() - videoState.lastUpdatedAt) / 1000
         : videoState.currentTime;
 
     const drift = Math.abs(video.currentTime - expectedTime);
@@ -142,7 +262,7 @@ export function SyncedVideoPlayer({
     } else if (!videoState.isPlaying && !video.paused) {
       video.pause();
     }
-  }, [videoState, canControl]);
+  }, [videoState]);
 
   // Host/admin: broadcast events on play/pause/seek/timeupdate
   useEffect(() => {
@@ -150,11 +270,11 @@ export function SyncedVideoPlayer({
     if (!video || !canControl) return;
 
     const onPlay = () =>
-      throttledSync({ isPlaying: true, currentTime: video.currentTime });
+      emitSync({ isPlaying: true, currentTime: video.currentTime });
     const onPause = () =>
-      throttledSync({ isPlaying: false, currentTime: video.currentTime });
+      emitSync({ isPlaying: false, currentTime: video.currentTime });
     const onSeeked = () =>
-      throttledSync({ isPlaying: !video.paused, currentTime: video.currentTime });
+      emitSync({ isPlaying: !video.paused, currentTime: video.currentTime });
     const onEnded = () => {
       const vid = videoState?.videoId;
       if (vid && videoEndSentRef.current !== vid) {
@@ -181,7 +301,7 @@ export function SyncedVideoPlayer({
       video.removeEventListener("ended", onEnded);
       video.removeEventListener("timeupdate", onTimeUpdate);
     };
-  }, [canControl, videoState?.videoId, throttledSync, onVideoEnd]);
+  }, [canControl, videoState?.videoId, emitSync, throttledSync, onVideoEnd]);
 
   // Drive UI state from video element events
   useEffect(() => {
@@ -338,33 +458,70 @@ export function SyncedVideoPlayer({
     }
   }, []);
 
-  // ── Waiting state ───────────────────────────────────────────────────────
-  if (awaitingHost) {
-    return (
-      <div className="w-full h-full bg-gray-950 flex items-center justify-center">
-        <div className="text-center">
-          <div className="w-16 h-16 rounded-full bg-gray-800 border border-white/10 flex items-center justify-center mx-auto mb-4">
-            <Clock className="w-8 h-8 text-gray-500 animate-pulse" />
-          </div>
-          {canControl ? (
-            <div className="space-y-2">
-              <p className="text-white font-semibold">Queue is empty</p>
-              <p className="text-gray-400 text-sm">
-                Select a video to continue the party
-              </p>
-            </div>
-          ) : (
-            <div className="space-y-2">
-              <p className="text-white font-semibold">Waiting for host…</p>
-              <p className="text-gray-400 text-sm">
-                The host is choosing the next video
-              </p>
-            </div>
-          )}
-        </div>
-      </div>
-    );
-  }
+  // ── Keyboard shortcuts ────────────────────────────────────────────────────
+  // Play/pause/seek go through the same canControl-gated handlers (viewers can't
+  // drive playback); volume/mute/fullscreen are local and allowed for everyone.
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      const video = videoRef.current;
+      if (!video) return;
+
+      // Don't hijack typing in the chat box / other inputs.
+      const target = e.target as HTMLElement | null;
+      if (
+        target &&
+        (target.tagName === "INPUT" ||
+          target.tagName === "TEXTAREA" ||
+          target.isContentEditable)
+      ) {
+        return;
+      }
+
+      switch (e.key) {
+        case " ":
+        case "k":
+          e.preventDefault();
+          handleTogglePlay();
+          break;
+        case "ArrowLeft":
+          if (!canControl) return;
+          e.preventDefault();
+          handleSkip(-10);
+          break;
+        case "ArrowRight":
+          if (!canControl) return;
+          e.preventDefault();
+          handleSkip(10);
+          break;
+        case "ArrowUp":
+          e.preventDefault();
+          video.volume = Math.min(1, video.volume + 0.1);
+          video.muted = false;
+          break;
+        case "ArrowDown":
+          e.preventDefault();
+          video.volume = Math.max(0, video.volume - 0.1);
+          break;
+        case "m":
+        case "M":
+          handleToggleMute();
+          break;
+        case "f":
+        case "F":
+          handleToggleFullscreen();
+          break;
+      }
+    };
+
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [
+    canControl,
+    handleTogglePlay,
+    handleSkip,
+    handleToggleMute,
+    handleToggleFullscreen,
+  ]);
 
   // ── Derived values ──────────────────────────────────────────────────────
   const displayTime = dragTime ?? currentTime;
@@ -378,12 +535,91 @@ export function SyncedVideoPlayer({
       onMouseMove={resetHideTimer}
       onMouseEnter={resetHideTimer}
     >
+      {/*
+        No `key` here: the element must stay stable across video switches.
+        Shaka detaches/reattaches and loads the new manifest on the same
+        element, and the once-attached UI event listeners keep firing — a
+        `key` would recreate the element and orphan those listeners (frozen UI).
+      */}
       <video
         ref={videoRef}
-        key={videoState?.videoId}
         className="w-full h-full object-contain"
         playsInline
       />
+
+      {/* ── Awaiting-host overlay (kept above the always-mounted <video>) ──── */}
+      {awaitingHost && (
+        <div className="absolute inset-0 z-40 flex items-center justify-center bg-gray-950">
+          <div className="text-center">
+            <div className="w-16 h-16 rounded-full bg-gray-800 border border-white/10 flex items-center justify-center mx-auto mb-4">
+              <Clock className="w-8 h-8 text-gray-500 animate-pulse" />
+            </div>
+            {canControl ? (
+              <div className="space-y-2">
+                <p className="text-white font-semibold">Queue is empty</p>
+                <p className="text-gray-400 text-sm">
+                  Select a video to continue the party
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                <p className="text-white font-semibold">Waiting for host…</p>
+                <p className="text-gray-400 text-sm">
+                  The host is choosing the next video
+                </p>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* ── Access gating overlays (per participant) ──────────────────────── */}
+      {isAccessLoading ? (
+        <div className="absolute inset-0 z-30 flex items-center justify-center bg-black/80">
+          <div className="flex items-center gap-2 text-white text-lg">
+            <span className="animate-spin rounded-full h-5 w-5 border-b-2 border-white" />
+            Loading secure player…
+          </div>
+        </div>
+      ) : accessError && isUnauthenticatedError(accessError) ? (
+        <div className="absolute inset-0 z-30 flex flex-col items-center justify-center gap-4 bg-black/85 px-6 text-center">
+          <div className="w-14 h-14 rounded-full bg-white/10 flex items-center justify-center">
+            <LogIn className="w-7 h-7 text-white" />
+          </div>
+          <div className="space-y-1">
+            <p className="text-white font-semibold text-lg">Sign in to watch</p>
+            <p className="text-gray-300 text-sm max-w-sm">
+              {getFriendlyErrorMessage(accessError)}
+            </p>
+          </div>
+          <button
+            onClick={() => openLoginModal()}
+            className="bg-orange-500 hover:bg-orange-600 text-white font-semibold px-6 py-2 rounded-full transition-colors"
+          >
+            Sign In
+          </button>
+        </div>
+      ) : accessError && isPermissionError(accessError) ? (
+        <div className="absolute inset-0 z-30 flex flex-col items-center justify-center gap-4 bg-black/85 px-6 text-center">
+          <div className="w-14 h-14 rounded-full bg-white/10 flex items-center justify-center">
+            <LockIcon className="w-7 h-7 text-white" />
+          </div>
+          <div className="space-y-1">
+            <p className="text-white font-semibold text-lg">
+              Subscription required
+            </p>
+            <p className="text-gray-300 text-sm max-w-sm">
+              {getFriendlyErrorMessage(accessError)}
+            </p>
+          </div>
+          <Link
+            href="/#pricing"
+            className="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white font-semibold px-6 py-2 rounded-full transition-colors"
+          >
+            View plans
+          </Link>
+        </div>
+      ) : null}
 
       {/* Control overlay */}
       <div
