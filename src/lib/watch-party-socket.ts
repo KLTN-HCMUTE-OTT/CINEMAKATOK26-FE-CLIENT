@@ -23,9 +23,36 @@ export function getWatchPartySocket(userId: string): Socket {
     reconnection: true,
     reconnectionAttempts: 5,
     reconnectionDelay: 1000,
+    // On a fresh reload the persisted session restores `user` synchronously,
+    // but the in-memory access token is hydrated asynchronously — so it may be
+    // null here. Don't auto-connect with a null token (the server would reject
+    // the handshake with "Missing token"); refresh first, then connect below.
+    autoConnect: Boolean(token),
   });
 
   currentUserId = userId;
+
+  if (!token) {
+    void (async () => {
+      try {
+        const res = await fetch("/api/auth/refresh", {
+          method: "POST",
+          credentials: "include",
+        });
+        if (res.ok && socket) {
+          const body = (await res.json()) as { accessToken?: string };
+          if (body.accessToken) {
+            setAccessTokenInMemory(body.accessToken);
+            socket.auth = { token: body.accessToken };
+          }
+        }
+      } catch {
+        // Fall through and connect anyway so the connect_error recovery runs.
+      } finally {
+        socket?.connect();
+      }
+    })();
+  }
 
   socket.on("connect_error", async (err) => {
     let isUnauthorized = false;
