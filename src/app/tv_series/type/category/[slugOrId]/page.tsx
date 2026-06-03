@@ -29,7 +29,6 @@ export default async function TVSeriesByCategoryPage({ params }: Props) {
       categoryId = possibleUUID;
     }
   }
-  console.log("Category ID:", categoryId);
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-900 via-slate-900 to-black">
       <Header variant="relative" />

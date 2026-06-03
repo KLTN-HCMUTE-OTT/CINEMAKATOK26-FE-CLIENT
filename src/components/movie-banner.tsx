@@ -29,7 +29,6 @@ export function MovieBanner({
   const handleClick = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    console.log("Navigating to:", `/movies/${title}-${id}`);
     router.push(`/movies/${title}-${id}`);
   };
 

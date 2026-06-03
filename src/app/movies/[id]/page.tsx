@@ -15,6 +15,7 @@ import { use, useEffect, useState } from "react";
 import { LoadingErrorWrapper } from "@/components/loading-error-wrapper";
 import { ButtonAction } from "@/components/ui/button-action";
 import { WatchPartyQuickButton } from "@/components/watch-party/watch-party-quick-button";
+import { PremiumBadge, isPremiumContent } from "@/components/ui/premium-badge";
 
 interface Props {
   params: Promise<{ id: string }>;
@@ -57,20 +58,12 @@ function MoviePageContent({ movieId }: { movieId: string | undefined }) {
         if (response?.data) {
           setMovieData(response.data);
           setViewCount(response.data.data.metaData.viewCount || 0);
-          console.log("Movie data loaded:", {
-            movieId,
-            videoId: response.data.data.video?.id,
-            videoUrl: response.data.data.video?.videoUrl,
-            hasVideo: !!response.data.data.video,
-          });
         } else {
-          setError("Không tìm thấy dữ liệu phim");
+          setError("Not found movie");
         }
       } catch (err) {
         console.error("Error fetching movie:", err);
-        setError(
-          err instanceof Error ? err.message : "Lỗi khi tải dữ liệu phim"
-        );
+        setError(err instanceof Error ? err.message : "Error fetching movie");
       } finally {
         setIsLoading(false);
       }
@@ -93,17 +86,14 @@ function MoviePageContent({ movieId }: { movieId: string | undefined }) {
         await contentsControllerIncreaseViewCount({
           id: metaData.id,
         });
-        // Tăng view count locally sau khi API thành công
         setViewCount((prev) => prev + 1);
-        console.log("View count increased for content:", metaData.id);
       } catch (err) {
         console.error("Error increasing view count:", err);
-        // Không hiển thị error cho user vì đây là background operation
       }
     };
 
     increaseViewCount();
-  }, [metaData?.id]); //  Chỉ chạy một lần khi có metaData.id
+  }, [metaData?.id]);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-900 via-slate-900 to-black">
@@ -146,6 +136,13 @@ function MoviePageContent({ movieId }: { movieId: string | undefined }) {
                       priority
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+
+                    {/* Premium badge on poster */}
+                    {isPremiumContent(metaData.accessTier) && (
+                      <div className="absolute top-3 right-3 z-10">
+                        <PremiumBadge size="lg" showLabel />
+                      </div>
+                    )}
                   </div>
 
                   {/* Action Buttons */}

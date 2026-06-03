@@ -32,7 +32,6 @@ export function RankItem({
       onClick={handleClick}
       onMouseDown={(e) => {
         e.stopPropagation();
-        console.log("MouseDown detected"); // Debug
       }}
       role="button"
       tabIndex={0}

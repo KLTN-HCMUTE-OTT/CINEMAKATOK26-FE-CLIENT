@@ -24,6 +24,7 @@ interface WatchlistItem {
     trailer?: string;
     duration?: number;
     categories?: string[] | Array<{ id: string; name: string }>;
+    accessTier?: string;
   };
 }
 
@@ -40,6 +41,7 @@ export interface WatchlistCardData {
   duration: string;
   rating: string;
   youtubeTrailerUrl?: string;
+  accessTier?: string;
 }
 
 interface UseUserWatchlistOptions {
@@ -93,6 +95,7 @@ function transformWatchlistItem(item: WatchlistItem): WatchlistCardData {
     duration,
     rating,
     youtubeTrailerUrl: content.trailer,
+    accessTier: content.accessTier,
   };
 }
 

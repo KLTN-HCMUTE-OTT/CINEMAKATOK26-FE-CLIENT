@@ -6,12 +6,14 @@ import { useRouter } from "next/navigation";
 import { TvSeriesFilter } from "@/components/tv_serie/tv-series-filter";
 import { CustomCarousel } from "@/components/custom-carousel";
 import { useTvSeriesList } from "@/hooks/use-tvseries";
+import { PremiumBadge, isPremiumContent } from "@/components/ui/premium-badge";
 
 interface TvSeriesCardProps {
   id: string;
   imageUrl: string;
   title: string;
   totalSeasons: number;
+  accessTier?: string;
 }
 
 export function TvSeriesCard({
@@ -19,6 +21,7 @@ export function TvSeriesCard({
   imageUrl,
   title,
   totalSeasons,
+  accessTier,
 }: TvSeriesCardProps) {
   const [imgSrc, setImgSrc] = useState(imageUrl || "/default_banner.jpg");
   const router = useRouter();
@@ -34,6 +37,14 @@ export function TvSeriesCard({
           className="h-full w-full object-cover"
           onError={() => setImgSrc("/default_banner.jpg")}
         />
+        {/* Premium badge */}
+        {isPremiumContent(accessTier) && (
+          <PremiumBadge
+            size="sm"
+            showLabel
+            className="absolute top-2 right-2 z-10"
+          />
+        )}
       </div>
       <div className="p-4">
         <h3 className="text-lg font-semibold text-white truncate hover:text-purple-500">
@@ -61,6 +72,7 @@ export function TvSeriesCardList() {
         imageUrl: serie.metaData.thumbnail,
         title: serie.metaData.title,
         totalSeasons: serie.totalSeasons,
+        accessTier: serie.metaData.accessTier,
       })) || []
     );
   }, [result]);

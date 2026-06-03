@@ -8,7 +8,11 @@ import { EpisodeCardList } from "./card/episode-card";
 import useVideoAccess from "@/hooks/use-video-access";
 import { useWatchProgress } from "@/hooks/use-watch-progress";
 import { useUIStore } from "@/store";
-import { isUnauthenticatedError, isPermissionError, getFriendlyErrorMessage } from "@/lib/error-mapper";
+import {
+  isUnauthenticatedError,
+  isPermissionError,
+  getFriendlyErrorMessage,
+} from "@/lib/error-mapper";
 import { videosControllerGetVideoById } from "@/apis/api/videos";
 import { MoreTVSeriesSection } from "./section/more-tv-series-section";
 import { DetailInfoSection } from "./section/detail-info-section";
@@ -113,38 +117,11 @@ export default function TVSeriesVideoContent({
           season.episodes.sort((a, b) => a.episodeNumber - b.episodeNumber), // Then sort episodes within each season
       );
 
-    // console.log(
-    //   "All episodes order:",
-    //   allEpisodes.map(
-    //     (ep) =>
-    //       `S${
-    //         tvSeries.seasons.find((s) => s.episodes.some((e) => e.id === ep.id))
-    //           ?.seasonNumber
-    //       }E${ep.episodeNumber}`
-    //   )
-    // );
 
     const currentIndex = allEpisodes.findIndex((ep) => ep.id === episode.id);
-    // console.log(
-    //   "Current episode:",
-    //   `S${
-    //     tvSeries.seasons.find((s) =>
-    //       s.episodes.some((e) => e.id === episode.id)
-    //     )?.seasonNumber
-    //   }E${episode.episodeNumber}`,
-    //   "at index:",
-    //   currentIndex
-    // );
 
     if (currentIndex >= 0 && currentIndex < allEpisodes.length - 1) {
       const nextEpisode = allEpisodes[currentIndex + 1];
-      // const nextSeasonNum = tvSeries.seasons.find((s) =>
-      //   s.episodes.some((e) => e.id === nextEpisode.id)
-      // )?.seasonNumber;
-      // console.log(
-      //   "Next episode:",
-      //   `S${nextSeasonNum}E${nextEpisode.episodeNumber}`
-      // );
 
       router.push(
         `/tv_series/${tvSeries.metaData.title}-${tvSeries.id}/episode/${nextEpisode.episodeTitle}-${nextEpisode.id}`,
@@ -166,7 +143,6 @@ export default function TVSeriesVideoContent({
     const currentIndex = allEpisodes.findIndex((ep) => ep.id === episode.id);
     if (currentIndex > 0) {
       const prevEpisode = allEpisodes[currentIndex - 1];
-      console.log("Prev Episode Click:", prevEpisode);
       router.push(
         `/tv_series/${tvSeries.metaData.title}-${tvSeries.id}/episode/${prevEpisode.episodeTitle}-${prevEpisode.id}`,
       );

@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { WatchlistButton } from "@/components/watchlist-button";
+import { PremiumBadge, isPremiumContent } from "@/components/ui/premium-badge";
 
 interface TrendingMovieCardProps {
   movie: API.MovieDto;
@@ -72,6 +73,14 @@ export function TrendingMovieCard({ movie }: TrendingMovieCardProps) {
         onMouseLeave={handleMouseLeave}
       >
         <div className="absolute inset-0 border border-white/10 bg-[#0f1326] overflow-hidden">
+          {/* Premium badge – always visible top-right */}
+          {isPremiumContent(movie.metaData.accessTier) && (
+            <PremiumBadge
+              size="sm"
+              showLabel
+              className="absolute top-3 right-3 z-30"
+            />
+          )}
           {/* 1️⃣ Trailer iframe */}
           {movie.metaData.trailer && showDetails ? (
             <div className="relative w-full h-full">

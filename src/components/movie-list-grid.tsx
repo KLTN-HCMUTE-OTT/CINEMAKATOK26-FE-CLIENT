@@ -80,6 +80,7 @@ export default function MovieListGrid({ type = "all", categoryId }: Props) {
       description: movie.metaData.description,
       actors: movie.metaData.actors.map((c) => c.name) || [],
       crew: movie.metaData.directors?.map((c) => c.name) || [],
+      accessTier: movie.metaData.accessTier,
     }));
   }, [currentData]);
 

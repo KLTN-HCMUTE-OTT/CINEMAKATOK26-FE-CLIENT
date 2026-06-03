@@ -223,8 +223,6 @@ export function ProfileInfoSection() {
         phoneNumber: trimmedPhone,
       };
 
-      console.log("Profile updated:", updateData);
-
       // Update profile information
       await updateProfileMutation.mutateAsync(updateData);
 

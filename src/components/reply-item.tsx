@@ -86,13 +86,11 @@ export function ReplyItem({
       // This happens on mount (if replyCount undefined) or when manually reset
       if (fetchedReplyCount === null && reply.replyCount === undefined) {
         try {
-          console.log("[ReplyItem] Fetching count for reply:", reply.id);
           const response = await reviewReplyControllerGetReplyCountForReply({
             replyId: reply.id,
           });
           const data = (response as any).data?.data;
           const count = data?.replyCount ?? 0;
-          console.log("[ReplyItem] Fetched count:", data, "extracted:", count);
           setFetchedReplyCount(count);
         } catch (error) {
           console.error("Error fetching reply count:", error);
@@ -110,18 +108,11 @@ export function ReplyItem({
     if (forceRefreshCount > 0) {
       const fetchCount = async () => {
         try {
-          console.log("[ReplyItem] Force fetching count for reply:", reply.id);
           const response = await reviewReplyControllerGetReplyCountForReply({
             replyId: reply.id,
           });
           const data = (response as any).data?.data;
           const count = data?.replyCount ?? 0;
-          console.log(
-            "[ReplyItem] Force fetched count:",
-            data,
-            "extracted:",
-            count,
-          );
           setFetchedReplyCount(count);
         } catch (error) {
           console.error("Error force fetching reply count:", error);
@@ -134,18 +125,9 @@ export function ReplyItem({
   // Fetch nested replies when user clicks to expand
   const fetchNestedReplies = async (force = false) => {
     if (!force && nestedReplies.length > 0) {
-      console.log("[ReplyItem] Skip fetch - already loaded");
       return; // Already fetched
     }
 
-    console.log(
-      "[ReplyItem] Fetching nested replies for:",
-      reply.id,
-      "force:",
-      force,
-      "type:",
-      replyType,
-    );
     setLoadingNested(true);
     try {
       let response;
@@ -168,7 +150,6 @@ export function ReplyItem({
       if (response) {
         const data = (response as any).data;
         if (data?.data) {
-          console.log("[ReplyItem] Fetched nested replies:", data.data.length);
           setNestedReplies(data.data);
         }
       }
@@ -190,28 +171,15 @@ export function ReplyItem({
   const handleReply = async () => {
     if (replyContent.trim()) {
       const wasExpanded = showNestedReplies;
-      console.log("[ReplyItem] handleReply START:", {
-        replyId: reply.id,
-        wasExpanded,
-        nestedRepliesCount: nestedReplies.length,
-      });
 
       await onReply(reply.id, replyContent.trim());
       setReplyContent("");
       setIsReplying(false);
 
       // Force refresh count to update the badge immediately
-      console.log(
-        "[ReplyItem] handleReply - forcing count refresh for:",
-        reply.id,
-      );
       setForceRefreshCount((prev) => prev + 1);
 
       // Always force refetch nested replies to show the new one and maintain expand state
-      console.log(
-        "[ReplyItem] Force refetching nested replies, wasExpanded:",
-        wasExpanded,
-      );
       setNestedReplies([]);
       await fetchNestedReplies(true); // Force refetch
 
@@ -220,7 +188,6 @@ export function ReplyItem({
         onReplyCreated(reply.id);
       }
 
-      console.log("[ReplyItem] handleReply END");
     }
   };
 
@@ -247,14 +214,8 @@ export function ReplyItem({
   };
 
   const handleReplyCreatedInChild = (parentReplyId: string) => {
-    console.log("[ReplyItem] handleReplyCreatedInChild called:", {
-      myReplyId: reply.id,
-      parentReplyId,
-      matches: parentReplyId === reply.id,
-    });
     // If this reply is the parent, refresh count
     if (parentReplyId === reply.id) {
-      console.log("[ReplyItem] Force refreshing count for reply:", reply.id);
       setForceRefreshCount((prev) => prev + 1);
     }
     // Propagate up to parent

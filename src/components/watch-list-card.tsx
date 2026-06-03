@@ -3,6 +3,7 @@
 
 import { CheckCircle2, Circle } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { PremiumBadge, isPremiumContent } from "@/components/ui/premium-badge";
 
 interface WatchListCardProps {
   movie: {
@@ -17,6 +18,7 @@ interface WatchListCardProps {
     duration: string;
     rating: string;
     youtubeTrailerUrl?: string;
+    accessTier?: string;
   };
   isEditing: boolean;
   isSelected: boolean;
@@ -62,6 +64,15 @@ export const WatchListCard = ({
           }}
         />
         <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent" />
+
+        {/* Premium badge */}
+        {isPremiumContent(movie.accessTier) && (
+          <PremiumBadge
+            size="sm"
+            showLabel
+            className="absolute top-2 right-2 z-10"
+          />
+        )}
 
         {/* Biểu tượng chọn khi edit */}
         {isEditing && (

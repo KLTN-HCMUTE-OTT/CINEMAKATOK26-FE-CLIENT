@@ -38,7 +38,6 @@ export function PricingPlans() {
       setLoadingPlan(planType);
       const res = await paymentControllerInitiateSubscription({ plan: planType });
       const paymentUrl = res.data?.data?.paymentUrl;
-      console.log(paymentUrl);
       if (paymentUrl) {
         window.location.href = paymentUrl;
       } else {

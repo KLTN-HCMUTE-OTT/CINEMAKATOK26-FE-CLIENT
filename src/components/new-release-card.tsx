@@ -3,6 +3,7 @@
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { PremiumBadge, isPremiumContent } from "@/components/ui/premium-badge";
 
 interface ReleaseCardProps {
   movie: API.MovieDto;
@@ -28,6 +29,14 @@ export function ReleaseCard({ movie }: ReleaseCardProps) {
           priority={false}
           onError={() => setImgSrc("/default_banner.jpg")}
         />
+        {/* Premium badge */}
+        {isPremiumContent(movie.metaData.accessTier) && (
+          <PremiumBadge
+            size="sm"
+            showLabel
+            className="absolute top-2 right-2 z-10"
+          />
+        )}
       </div>
 
       <div className="space-y-2">

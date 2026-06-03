@@ -6,6 +6,7 @@ import { Card } from "@/components/ui/card";
 import { Play, Info } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { PremiumBadge, isPremiumContent } from "@/components/ui/premium-badge";
 
 interface MovieHoverCardProps {
   id: string;
@@ -18,6 +19,7 @@ interface MovieHoverCardProps {
   actors: string[];
   crew: string[];
   genres: string[];
+  accessTier?: string;
 }
 
 export default function MovieHoverCard({
@@ -31,6 +33,7 @@ export default function MovieHoverCard({
   actors,
   crew,
   genres,
+  accessTier,
 }: MovieHoverCardProps) {
   const router = useRouter();
   const [hover, setHover] = useState(false);
@@ -62,6 +65,14 @@ export default function MovieHoverCard({
             fill
             className="object-cover transition-transform duration-300 rounded-t-xl"
           />
+          {/* Premium badge on poster */}
+          {isPremiumContent(accessTier) && (
+            <PremiumBadge
+              size="sm"
+              showLabel
+              className="absolute top-2 right-2 z-10"
+            />
+          )}
           <div className="absolute bottom-0 left-0 right-0 p-3 bg-gradient-to-t from-black via-black/40 to-transparent">
             <h3 className="text-white font-semibold text-base line-clamp-1">
               {title}
