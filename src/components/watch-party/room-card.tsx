@@ -1,9 +1,11 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { Lock, Users, Clock } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import type { RoomListItem } from "@/types/watch-party";
+import { useRoomContent } from "@/hooks/use-room-content";
 
 interface RoomCardProps {
   room: RoomListItem;
@@ -24,6 +26,9 @@ export function RoomCard({ room, compact = false, onJoin }: RoomCardProps) {
   const isNearlyFull = occupancy >= 0.8;
   const isFull = room.memberCount >= room.maxMembers;
 
+  const { contentRef } = useRoomContent(room.roomId, room.videoId);
+  const posterUrl = contentRef?.posterUrl;
+
   const inner = (
     <div
       className={`
@@ -36,7 +41,7 @@ export function RoomCard({ room, compact = false, onJoin }: RoomCardProps) {
       `}
     >
       {/* Live pulse indicator */}
-      <div className="absolute top-3 right-3 flex items-center gap-1.5">
+      <div className="absolute top-3 right-3 z-10 flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-black/50 backdrop-blur-sm">
         <span className="relative flex h-2 w-2">
           <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-purple-400 opacity-75" />
           <span className="relative inline-flex rounded-full h-2 w-2 bg-purple-500" />
@@ -56,9 +61,19 @@ export function RoomCard({ room, compact = false, onJoin }: RoomCardProps) {
           ${compact ? "h-24" : "h-36"}
         `}
       >
-        <div className="text-2xl font-black text-white/20 tracking-wider select-none">
-          {getInitials(room.title)}
-        </div>
+        {posterUrl ? (
+          <Image
+            src={posterUrl}
+            alt={contentRef?.title || room.title}
+            fill
+            sizes="(max-width: 768px) 100vw, 320px"
+            className="object-cover"
+          />
+        ) : (
+          <div className="text-2xl font-black text-white/20 tracking-wider select-none">
+            {getInitials(room.title)}
+          </div>
+        )}
         <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/3 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-700 ease-in-out" />
       </div>
 

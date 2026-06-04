@@ -8,6 +8,7 @@ import { moviesControllerGetMovies } from "@/apis/api/movies";
 import { tvSeriesControllerGetTvSeries } from "@/apis/api/tvSeries";
 import type { ContentType } from "./content-type-tabs";
 import { extractVideoId } from "@/lib/content-video-resolver";
+import { PremiumBadge, isPremiumContent } from "@/components/ui/premium-badge";
 
 interface ContentSearchListProps {
   contentType: ContentType;
@@ -191,6 +192,9 @@ function MovieRow({
             <VideoOff className="w-4 h-4 text-gray-600" />
           </div>
         )}
+        {isPremiumContent(movie.metaData.accessTier) && (
+          <PremiumBadge size="sm" className="absolute top-0.5 left-0.5 !px-1 !py-0.5" />
+        )}
       </div>
       <div className="flex-1 min-w-0">
         <p className="text-sm font-medium text-white truncate">
@@ -207,6 +211,9 @@ function MovieRow({
           <span className="text-xs px-1.5 py-0.5 rounded bg-blue-500/15 text-blue-400 font-medium">
             Movie
           </span>
+          {isPremiumContent(movie.metaData.accessTier) && (
+            <PremiumBadge size="sm" showLabel />
+          )}
           {noVideo && (
             <span className="text-xs px-1.5 py-0.5 rounded bg-gray-700/50 text-gray-500">
               Coming soon
@@ -247,6 +254,9 @@ function SeriesRow({
             <VideoOff className="w-4 h-4 text-gray-600" />
           </div>
         )}
+        {isPremiumContent(series.metaData.accessTier) && (
+          <PremiumBadge size="sm" className="absolute top-0.5 left-0.5 !px-1 !py-0.5" />
+        )}
       </div>
       <div className="flex-1 min-w-0">
         <p className="text-sm font-medium text-white truncate">
@@ -264,6 +274,9 @@ function SeriesRow({
           <span className="text-xs px-1.5 py-0.5 rounded bg-purple-500/15 text-purple-400 font-medium">
             TV Series
           </span>
+          {isPremiumContent(series.metaData.accessTier) && (
+            <PremiumBadge size="sm" showLabel />
+          )}
           <span className="text-xs text-gray-600">
             {series.totalSeasons} season{series.totalSeasons !== 1 ? "s" : ""}
           </span>
