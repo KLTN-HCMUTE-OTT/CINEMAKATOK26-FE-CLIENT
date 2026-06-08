@@ -50,11 +50,11 @@ export function BlogCard({ news }: BlogCardProps) {
           </p>
 
           <div className="flex flex-wrap items-center gap-4 text-gray-400 text-sm md:text-base">
-            <span>{formattedDate}</span>
-            <span>•</span>
-            <span>{news.name || "Anonymous"}</span>
+            <span>{news.author_name || "Admin"}</span>
             <span>•</span>
             {news.category && <span>{news.category.join(", ")}</span>}
+            <span>•</span>
+            <span>{formattedDate}</span>
           </div>
         </div>
       </div>
