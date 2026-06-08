@@ -225,7 +225,7 @@ jobs:
           vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID }}
           vercel-args: "--prod"
           scope: ${{ secrets.VERCEL_ORG_ID }}
-          vercel-version: latest
+          vercel-version: 28.0.0
 
       - name: Post-deployment verification
         run: |
@@ -266,7 +266,7 @@ jobs:
         run: pnpm install --no-frozen-lockfile
 
       - name: Install Playwright Browsers
-        run: pnpm exec playwright install --with-deps chromium
+        run: pnpm exec playwright install --with-deps
 
       - name: Run Playwright tests
         run: pnpm exec playwright test
