@@ -73,7 +73,9 @@ export function BlogBanner() {
 
               {/* Footer info — enlarged */}
               <div className="flex items-center gap-8 text-gray-300 text-base md:text-2xl pt-2">
-                <span className="font-semibold">{news.name || "Jane Doe"}</span>
+                <span className="font-semibold">
+                  {news.author_name || "Admin"}
+                </span>
                 <span className="font-semibold">{formattedDate}</span>
               </div>
             </div>
