@@ -61,21 +61,52 @@ export function TvSeriesCardList() {
   const [displayData, setDisplayData] = useState<any[]>([]);
   const [isTransitioning, setIsTransitioning] = useState<boolean>(true);
 
-  const { result, isLoading, error } = useTvSeriesList({
-    filter: JSON.stringify({ range: filter }),
-  });
+  const { result, isLoading, error } = useTvSeriesList({});
 
   const items = useMemo(() => {
-    return (
-      result?.data.map((serie: any) => ({
+    if (!result?.data) return [];
+
+    const todayStart = new Date();
+    todayStart.setHours(0, 0, 0, 0);
+
+    const weekStart = new Date();
+    const day = weekStart.getDay();
+    const diff = weekStart.getDate() - day + (day === 0 ? -6 : 1);
+    weekStart.setDate(diff);
+    weekStart.setHours(0, 0, 0, 0);
+
+    const monthStart = new Date();
+    monthStart.setDate(1);
+    monthStart.setHours(0, 0, 0, 0);
+
+    return result.data
+      .map((serie: any) => ({
         id: serie.id,
         imageUrl: serie.metaData.thumbnail,
         title: serie.metaData.title,
         totalSeasons: serie.totalSeasons,
         accessTier: serie.metaData.accessTier,
-      })) || []
-    );
-  }, [result]);
+        createdAtDate: new Date(serie.createdAt),
+      }))
+      .filter((item) => {
+        if (filter === "today") {
+          return item.createdAtDate >= todayStart;
+        }
+        if (filter === "week") {
+          return item.createdAtDate >= weekStart;
+        }
+        if (filter === "month") {
+          return item.createdAtDate >= monthStart;
+        }
+        return true;
+      });
+  }, [result, filter]);
+
+  // Bắt đầu transition khi thay đổi filter
+  const handleFilterChange = (newFilter: string) => {
+    setFilter(newFilter);
+    setIsTransitioning(true);
+  };
 
   // Cập nhật displayData khi có data mới với timeout
   useEffect(() => {
@@ -91,12 +122,6 @@ export function TvSeriesCardList() {
       return () => clearTimeout(timeout);
     }
   }, [isLoading, items]);
-
-  // Bắt đầu transition khi thay đổi filter
-  const handleFilterChange = (newFilter: string) => {
-    setFilter(newFilter);
-    setIsTransitioning(true);
-  };
 
   return (
     <section className="px-6 py-8 overflow-hidden">

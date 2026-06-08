@@ -5,21 +5,11 @@ import { useState, useMemo, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useTvSeriesList } from "@/hooks/use-tvseries";
 
-const timeFilters = ["Today", "This Week", "This Month", "This Year"];
-
-const filterMap: Record<string, string> = {
-  Today: "today",
-  "This Week": "week",
-  "This Month": "month",
-  "This Year": "year",
-};
-
 export function TvSeries() {
-  const [activeFilter, setActiveFilter] = useState("Today");
   const router = useRouter();
 
   const { result, isLoading, error } = useTvSeriesList({
-    filter: JSON.stringify({ range: filterMap[activeFilter] }),
+    sort: JSON.stringify({ releaseDate: "DESC" }),
   });
 
   const tvShows = useMemo(() => {
@@ -36,14 +26,6 @@ export function TvSeries() {
     }));
   }, [result]);
 
-  useEffect(() => {
-    if (!isLoading && tvShows.length === 0) {
-      const currentIndex = timeFilters.indexOf(activeFilter);
-      if (currentIndex < timeFilters.length - 1) {
-        setActiveFilter(timeFilters[currentIndex + 1]);
-      }
-    }
-  }, [isLoading, tvShows.length, activeFilter]);
 
   const featuredShow = tvShows.find((show) => show.featured) ?? tvShows[0];
   const otherShows = tvShows.filter((show) => show.id !== featuredShow?.id);
@@ -80,25 +62,6 @@ export function TvSeries() {
     <section className="px-6 py-10">
       <div className="flex flex-col gap-6 md:flex-row md:items-center md:justify-between mb-8">
         <h2 className="text-white text-3xl font-semibold">TV Series</h2>
-
-        <div className="flex items-center gap-6 text-sm">
-          {timeFilters.map((filter) => {
-            const isActive = activeFilter === filter;
-            return (
-              <button
-                key={filter}
-                onClick={() => setActiveFilter(filter)}
-                className={`relative font-medium transition-colors pb-1 ${
-                  isActive
-                    ? "text-[#7C5CFF] after:absolute after:left-0 after:bottom-0 after:h-0.5 after:w-full after:bg-[#7C5CFF]"
-                    : "text-[#6F7286] hover:text-white"
-                }`}
-              >
-                {filter}
-              </button>
-            );
-          })}
-        </div>
       </div>
 
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]">

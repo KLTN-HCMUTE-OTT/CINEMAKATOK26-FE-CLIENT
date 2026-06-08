@@ -97,23 +97,23 @@ export const useVideoPlayer = ({
           if (e.key === "ArrowRight") {
             e.preventDefault();
             if (player) {
-              player.currentTime(player.currentTime() + 10);
+              player.currentTime((player.currentTime() || 0) + 10);
             }
           }
           // Arrow Left: -10s
           if (e.key === "ArrowLeft") {
             e.preventDefault();
-            player.currentTime(player.currentTime() - 10);
+            player.currentTime((player.currentTime() || 0) - 10);
           }
           // Arrow Up: +10% volume
           if (e.key === "ArrowUp") {
             e.preventDefault();
-            player.volume(Math.min(player.volume() + 0.1, 1));
+            player.volume(Math.min((player.volume() || 0) + 0.1, 1));
           }
           // Arrow Down: -10% volume
           if (e.key === "ArrowDown") {
             e.preventDefault();
-            player.volume(Math.max(player.volume() - 0.1, 0));
+            player.volume(Math.max((player.volume() || 0) - 0.1, 0));
           }
           // F: fullscreen
           if (e.key === "f" || e.key === "F") {

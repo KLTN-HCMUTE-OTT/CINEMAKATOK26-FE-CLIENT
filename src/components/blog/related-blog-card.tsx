@@ -43,9 +43,7 @@ export function RelatedBlogCard({ news }: RelatedBlogCardProps) {
           </p>
 
           <div className="flex flex-wrap items-center gap-3 text-gray-400 text-sm">
-            <span>{formattedDate}</span>
-            <span>•</span>
-            <span>{news.name || "Anonymous"}</span>
+            <span>{news.author_name || "Admin"}</span>
             <span>•</span>
             {news.category && (
               <>
