@@ -34,8 +34,11 @@ export default defineConfig({
   ],
 
   webServer: {
-    command: 'pnpm run build && pnpm start -- -p 3020',
+    command: 'pnpm run build && pnpm start',
     url: 'http://localhost:3020',
+    env: {
+      PORT: '3020',
+    },
     reuseExistingServer: !process.env.CI,
     timeout: 180_000,
   },
