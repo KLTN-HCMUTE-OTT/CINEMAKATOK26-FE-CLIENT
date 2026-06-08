@@ -187,6 +187,8 @@ jobs:
           npm install -g @lhci/cli@0.12.x
           lhci autorun --config=./lighthouserc.js
         continue-on-error: true
+        env:
+          LHCI_GITHUB_APP_TOKEN: ${{ secrets.LHCI_GITHUB_APP_TOKEN }}
 
       - name: Stop application
         if: always()
@@ -223,6 +225,7 @@ jobs:
           vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID }}
           vercel-args: "--prod"
           scope: ${{ secrets.VERCEL_ORG_ID }}
+          vercel-version: latest
 
       - name: Post-deployment verification
         run: |
