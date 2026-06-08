@@ -68,10 +68,6 @@ jobs:
     runs-on: ubuntu-latest
     needs: quality
 
-    strategy:
-      matrix:
-        environment: [staging, production]
-
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -91,18 +87,12 @@ jobs:
         run: pnpm install --no-frozen-lockfile
 
       - name: Build application
-        run: |
-          if [ "${{ matrix.environment }}" == "production" ]; then
-            NODE_ENV=production pnpm run build
-          else
-            NODE_ENV=${{ matrix.environment }} pnpm run build
-          fi
+        run: NODE_ENV=production pnpm run build
         env:
           NEXT_PUBLIC_API_URL: ${{ secrets.API_URL || 'http://localhost:3000' }}
           NEXT_PUBLIC_GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID || 'mock-id' }}
 
       - name: Bundle analysis
-        if: matrix.environment == 'production'
         run: ANALYZE=true pnpm run build
         continue-on-error: true
         env:
@@ -110,7 +100,6 @@ jobs:
           NEXT_PUBLIC_GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID || 'mock-id' }}
 
       - name: Upload build artifacts
-        if: matrix.environment == 'production'
         uses: actions/upload-artifact@v4
         with:
           name: production-build
@@ -178,6 +167,7 @@ jobs:
         env:
           NEXT_PUBLIC_API_URL: ${{ secrets.API_URL || 'http://localhost:3000' }}
           NEXT_PUBLIC_GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID || 'mock-id' }}
+          NEXT_PUBLIC_WS_URL: ${{ secrets.WS_URL || 'http://localhost:3000' }}
 
       - name: Start application
         run: |
@@ -197,43 +187,6 @@ jobs:
       - name: Stop application
         if: always()
         run: kill $APP_PID || true
-
-  # Deploy to Staging
-  deploy-staging:
-    name: Deploy to Staging
-    runs-on: ubuntu-latest
-    needs: [quality, build, security]
-    if: github.ref == 'refs/heads/develop'
-    environment: staging
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Install pnpm
-        uses: pnpm/action-setup@v2
-        with:
-          version: ${{ env.PNPM_VERSION }}
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-          cache: "pnpm"
-
-      - name: Deploy to Vercel (Staging)
-        uses: amondnet/vercel-action@v25
-        with:
-          vercel-token: ${{ secrets.VERCEL_TOKEN }}
-          vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
-          vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID }}
-          scope: ${{ secrets.VERCEL_ORG_ID }}
-
-      - name: Run smoke tests
-        run: |
-          sleep 30
-          curl -f ${{ secrets.STAGING_URL }}/api/health || exit 1
-          curl -f ${{ secrets.STAGING_URL }} || exit 1
 
   # Deploy to Production
   deploy-production:
