@@ -5,7 +5,7 @@ export default defineConfig({
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,
-  workers: process.env.CI ? 1 : undefined,
+  workers: process.env.CI ? 2 : undefined,
   reporter: process.env.CI
     ? [['html', { open: 'never' }], ['github']]
     : 'html',
@@ -34,9 +34,9 @@ export default defineConfig({
   ],
 
   webServer: {
-    command: 'pnpm run dev',
+    command: 'pnpm run build && pnpm start -- -p 3020',
     url: 'http://localhost:3020',
     reuseExistingServer: !process.env.CI,
-    timeout: 120_000,
+    timeout: 180_000,
   },
 });

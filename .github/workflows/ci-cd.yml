@@ -175,12 +175,12 @@ jobs:
 
       - name: Start application
         run: |
-          pnpm start -p 3010 &
+          pnpm start -p 3020 &
           APP_PID=$!
           echo "APP_PID=$APP_PID" >> $GITHUB_ENV
 
           # Wait for app to be ready on the correct port
-          timeout 60 bash -c 'until curl -f http://localhost:3010; do sleep 2; done'
+          timeout 60 bash -c 'until curl -f http://localhost:3020; do sleep 2; done'
 
       - name: Run Lighthouse CI
         run: |
