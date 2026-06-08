@@ -5,7 +5,8 @@ export default defineConfig({
   test: {
     env: {
       NEXT_PUBLIC_API_URL: 'http://localhost:3000',
-      NEXT_PUBLIC_GOOGLE_CLIENT_ID: 'mock-id'
+      NEXT_PUBLIC_GOOGLE_CLIENT_ID: 'mock-id',
+      NEXT_PUBLIC_WS_URL: 'ws://localhost:3000'
     },
     css: false,
     environment: 'jsdom',
