@@ -11,7 +11,7 @@ export function TrendingMoviesList({
   limit,
   sort,
   search,
-}: API.MovieControllerFindAllParams) {
+}: API.MoviesControllerGetTrendingMoviesParams) {
   const { result, isLoading, error, refetch } = useTrendingMovies({
     page,
     limit,

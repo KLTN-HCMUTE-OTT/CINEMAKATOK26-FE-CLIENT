@@ -66,7 +66,7 @@ export function TopNews() {
                   })}
                 </span>
                 <span>•</span>
-                <span>{article.name}</span>
+                <span>{article.author_name}</span>
                 {article.category && (
                   <>
                     <span>•</span>

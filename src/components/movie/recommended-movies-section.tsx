@@ -32,7 +32,7 @@ export function RecommendedMoviesSection({
     page: 1,
     limit: 10,
     movieId,
-  } as API.MovieControllerGetRecommendationsByMovieIdParams);
+  } as API.MoviesControllerGetRecommendationsByMovieIdParams);
 
   const recommendedMovies: Movie[] =
     result?.data.map((movie) => ({

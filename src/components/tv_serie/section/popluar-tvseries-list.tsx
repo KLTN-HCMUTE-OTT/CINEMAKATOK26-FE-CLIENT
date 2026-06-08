@@ -5,7 +5,7 @@ import { SkeletonCard } from "@/components/skeleton-card";
 import { TrendingCarousel } from "@/components/trending-carousel";
 import { TvSeriesPopularCard } from "../card/tv-series-popular-card";
 
-export function PopularTvSeriesList({}: API.MovieControllerFindAllParams) {
+export function PopularTvSeriesList({}: API.TvSeriesControllerGetTrendingTvSeriesParams) {
   const { result, isLoading } = useTVSeriesTrending({
     limit: 10,
   });

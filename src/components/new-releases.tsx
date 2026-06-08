@@ -10,7 +10,7 @@ export function NewReleases({
   limit,
   sort,
   search,
-}: API.MovieControllerGetNewReleaseMoviesParams) {
+}: API.MoviesControllerGetNewReleaseMoviesParams) {
   const { result, isLoading, error, refetch } = useNewReleaseMovies({
     page,
     limit,

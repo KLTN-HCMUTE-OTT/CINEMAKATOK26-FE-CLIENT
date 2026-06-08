@@ -83,7 +83,7 @@ export function InfoEpisodeCardList() {
 
         // Transform dữ liệu ngay khi set state
         const items: EpisodeCardProps[] =
-          response.data.data?.map((series) => ({
+          response.data.data?.map((series: any) => ({
             episodeNumber: series.latestEpisode?.episodeNumber ?? 0,
             title: series.metaData.title,
             imageUrl:
