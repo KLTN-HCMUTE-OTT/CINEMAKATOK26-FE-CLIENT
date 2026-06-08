@@ -9,19 +9,19 @@ test.describe('Site Navigation', () => {
   test('should navigate to contact page', async ({ page }) => {
     await page.goto('/contact');
     await expect(page).toHaveURL(/\/contact/);
-    await expect(page.locator('main')).toBeVisible();
+    await expect(page.locator('main').first()).toBeVisible();
   });
 
   test('should navigate to FAQs page', async ({ page }) => {
     await page.goto('/faqs');
     await expect(page).toHaveURL(/\/faqs/);
-    await expect(page.locator('main')).toBeVisible();
+    await expect(page.locator('main').first()).toBeVisible();
   });
 
   test('should navigate to blog page', async ({ page }) => {
     await page.goto('/blog');
     await expect(page).toHaveURL(/\/blog/);
-    await expect(page.locator('main')).toBeVisible();
+    await expect(page.locator('main').first()).toBeVisible();
   });
 
   test('should display 404 for unknown routes', async ({ page }) => {
@@ -35,7 +35,6 @@ test.describe('Site Navigation', () => {
   test('should have responsive header on mobile viewport', async ({ page }) => {
     await page.setViewportSize({ width: 375, height: 667 });
     await page.goto('/');
-    await page.waitForLoadState('networkidle');
 
     await expect(page.locator('header, nav').first()).toBeVisible();
   });
