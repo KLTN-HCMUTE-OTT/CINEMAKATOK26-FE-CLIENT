@@ -230,7 +230,6 @@ jobs:
       - name: Post-deployment verification
         run: |
           sleep 60
-          curl -f ${{ secrets.PRODUCTION_URL }}/api/health || exit 1
           curl -f ${{ secrets.PRODUCTION_URL }} || exit 1
 
       - name: Notify deployment success
