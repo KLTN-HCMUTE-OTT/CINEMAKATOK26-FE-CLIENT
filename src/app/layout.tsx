@@ -33,7 +33,9 @@ export default function RootLayout({
         <Providers>
           <GoogleOAuthProvider clientId={env.NEXT_PUBLIC_GOOGLE_CLIENT_ID}>
             <StoreHydrator />
-            {children}
+            <main>
+              {children}
+            </main>
             <Analytics />
             <ScrollToTopButton />
             <Toaster position="top-right" richColors />

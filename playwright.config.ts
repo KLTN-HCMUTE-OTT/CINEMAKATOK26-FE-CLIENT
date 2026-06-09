@@ -5,14 +5,14 @@ export default defineConfig({
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,
-  workers: process.env.CI ? 1 : undefined,
+  workers: process.env.CI ? 2 : undefined,
   reporter: process.env.CI
     ? [['html', { open: 'never' }], ['github']]
     : 'html',
   timeout: 30_000,
   expect: { timeout: 10_000 },
   use: {
-    baseURL: 'http://localhost:3010',
+    baseURL: 'http://localhost:3020',
     trace: 'on-first-retry',
     screenshot: 'only-on-failure',
     video: 'retain-on-failure',
@@ -34,9 +34,12 @@ export default defineConfig({
   ],
 
   webServer: {
-    command: 'pnpm run dev',
-    url: 'http://localhost:3010',
+    command: 'pnpm run build && pnpm start',
+    url: 'http://localhost:3020',
+    env: {
+      PORT: '3020',
+    },
     reuseExistingServer: !process.env.CI,
-    timeout: 120_000,
+    timeout: 180_000,
   },
 });

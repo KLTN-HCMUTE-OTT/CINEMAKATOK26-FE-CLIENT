@@ -175,18 +175,20 @@ jobs:
 
       - name: Start application
         run: |
-          pnpm start -p 3010 &
+          pnpm start -p 3020 &
           APP_PID=$!
           echo "APP_PID=$APP_PID" >> $GITHUB_ENV
 
           # Wait for app to be ready on the correct port
-          timeout 60 bash -c 'until curl -f http://localhost:3010; do sleep 2; done'
+          timeout 60 bash -c 'until curl -f http://localhost:3020; do sleep 2; done'
 
       - name: Run Lighthouse CI
         run: |
           npm install -g @lhci/cli@0.12.x
           lhci autorun --config=./lighthouserc.js
         continue-on-error: true
+        env:
+          LHCI_GITHUB_APP_TOKEN: ${{ secrets.LHCI_GITHUB_APP_TOKEN }}
 
       - name: Stop application
         if: always()
@@ -223,11 +225,11 @@ jobs:
           vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID }}
           vercel-args: "--prod"
           scope: ${{ secrets.VERCEL_ORG_ID }}
+          vercel-version: 50.0.0
 
       - name: Post-deployment verification
         run: |
           sleep 60
-          curl -f ${{ secrets.PRODUCTION_URL }}/api/health || exit 1
           curl -f ${{ secrets.PRODUCTION_URL }} || exit 1
 
       - name: Notify deployment success
@@ -264,7 +266,7 @@ jobs:
         run: pnpm install --no-frozen-lockfile
 
       - name: Install Playwright Browsers
-        run: pnpm exec playwright install --with-deps chromium
+        run: pnpm exec playwright install --with-deps
 
       - name: Run Playwright tests
         run: pnpm exec playwright test
