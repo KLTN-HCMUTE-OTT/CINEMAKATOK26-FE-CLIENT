@@ -1,6 +1,7 @@
 {
   "name": "my-next-app",
   "version": "0.1.0",
+  "packageManager": "pnpm@10.14.0",
   "private": true,
   "scripts": {
     "dev": "next dev --turbopack -p 3020",
