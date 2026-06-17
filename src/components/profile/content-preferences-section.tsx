@@ -4,7 +4,7 @@
  * ContentPreferencesSection
  *
  * Profile tab that lets the user configure their default content censorship
- * sensitivity for violence and nudity.  Settings are persisted via Zustand
+ * sensitivity for violence and nudity. Settings are persisted via Zustand
  * (localStorage) and applied as `initialPreferences` to every video player
  * session.
  *
@@ -20,16 +20,10 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
   Shield,
-  ShieldOff,
-  ShieldAlert,
-  ShieldCheck,
-  Eye,
-  EyeOff,
-  Swords,
-  RotateCcw,
   CheckCircle2,
-  Info,
+  RotateCcw,
   Loader2,
+  Info,
 } from "lucide-react";
 import { toast } from "sonner";
 import { useContentPreferencesStore } from "@/store/content-preferences.store";
@@ -41,75 +35,65 @@ interface SensitivityLevel {
   value: CensorSensitivity;
   label: string;
   description: string;
-  icon: React.ReactNode;
   badgeClass: string;
   cardClass: string;
   activeCardClass: string;
 }
 
+const DEFAULT_CARD_CLASS =
+  "border-white/10 bg-white/5 hover:bg-white/10 hover:border-white/20";
+
 const VIOLENCE_LEVELS: SensitivityLevel[] = [
   {
     value: "off",
-    label: "Off",
-    description: "Play normally. A small badge alerts you when violent content is detected.",
-    icon: <ShieldOff className="w-5 h-5" />,
-    badgeClass: "bg-zinc-700/60 text-zinc-300 border-zinc-600",
-    cardClass:
-      "border-white/10 bg-white/5 hover:bg-white/10 hover:border-white/20",
-    activeCardClass: "border-zinc-400/50 bg-zinc-700/30 ring-1 ring-zinc-400/30",
+    label: "No filtering",
+    description: "Watch the original cut. A small indicator appears when a violent scene starts.",
+    badgeClass: "bg-zinc-800 text-zinc-300 border-zinc-700",
+    cardClass: DEFAULT_CARD_CLASS,
+    activeCardClass: "border-zinc-500 bg-zinc-800/60",
   },
   {
     value: "moderate",
-    label: "Moderate",
-    description: "Blurs only detected regions (weapons, fists, blood). Rest of the scene remains visible.",
-    icon: <Shield className="w-5 h-5" />,
-    badgeClass: "bg-amber-900/50 text-amber-300 border-amber-700/50",
-    cardClass:
-      "border-white/10 bg-white/5 hover:bg-amber-900/10 hover:border-amber-700/30",
-    activeCardClass: "border-amber-500/50 bg-amber-900/20 ring-1 ring-amber-500/30",
+    label: "Blur sensitive areas",
+    description: "Automatically blurs weapons, blood, and impacts while the rest of the scene stays visible.",
+    badgeClass: "bg-orange-950/50 text-orange-300 border-orange-700/30",
+    cardClass: DEFAULT_CARD_CLASS,
+    activeCardClass: "border-orange-500 bg-orange-500/10",
   },
   {
     value: "strict",
-    label: "Strict",
-    description: "Blurs the entire screen during violent sequences. Strongest protection.",
-    icon: <ShieldAlert className="w-5 h-5" />,
-    badgeClass: "bg-red-900/50 text-red-300 border-red-700/50",
-    cardClass:
-      "border-white/10 bg-white/5 hover:bg-red-900/10 hover:border-red-700/30",
-    activeCardClass: "border-red-500/50 bg-red-900/20 ring-1 ring-red-500/30",
+    label: "Blur entire screen",
+    description: "Blurs the full frame during violent scenes. Best for shared or family viewing.",
+    badgeClass: "bg-red-950/50 text-red-300 border-red-700/30",
+    cardClass: DEFAULT_CARD_CLASS,
+    activeCardClass: "border-red-500 bg-red-500/10",
   },
 ];
 
 const NUDITY_LEVELS: SensitivityLevel[] = [
   {
     value: "off",
-    label: "Off",
-    description: "Play normally. A small badge alerts you when nudity is detected.",
-    icon: <Eye className="w-5 h-5" />,
-    badgeClass: "bg-zinc-700/60 text-zinc-300 border-zinc-600",
-    cardClass:
-      "border-white/10 bg-white/5 hover:bg-white/10 hover:border-white/20",
-    activeCardClass: "border-zinc-400/50 bg-zinc-700/30 ring-1 ring-zinc-400/30",
+    label: "No filtering",
+    description: "Watch unfiltered. A small indicator appears before mature scenes.",
+    badgeClass: "bg-zinc-800 text-zinc-300 border-zinc-700",
+    cardClass: DEFAULT_CARD_CLASS,
+    activeCardClass: "border-zinc-500 bg-zinc-800/60",
   },
   {
     value: "moderate",
-    label: "Moderate",
-    description: "Blurs only detected skin regions. Faces and context remain visible.",
-    icon: <EyeOff className="w-5 h-5" />,
-    badgeClass: "bg-pink-900/50 text-pink-300 border-pink-700/50",
-    cardClass:
-      "border-white/10 bg-white/5 hover:bg-pink-900/10 hover:border-pink-700/30",
-    activeCardClass: "border-pink-500/50 bg-pink-900/20 ring-1 ring-pink-500/30",
+    label: "Blur sensitive areas",
+    description: "Blurs explicit regions while keeping faces and background visible.",
+    badgeClass: "bg-pink-950/50 text-pink-300 border-pink-700/30",
+    cardClass: DEFAULT_CARD_CLASS,
+    activeCardClass: "border-pink-500 bg-pink-500/10",
   },
   {
     value: "strict",
-    label: "Strict",
-    description: "Blurs the entire screen during detected nudity. Strongest protection.",
-    icon: <ShieldCheck className="w-5 h-5" />,
-    badgeClass: "bg-purple-900/50 text-purple-300 border-purple-700/50",
-    cardClass:
-      "border-white/10 bg-white/5 hover:bg-purple-900/10 hover:border-purple-700/30",
-    activeCardClass: "border-purple-500/50 bg-purple-900/20 ring-1 ring-purple-500/30",
+    label: "Blur entire screen",
+    description: "Blurs the full frame during explicit or mature scenes.",
+    badgeClass: "bg-violet-950/50 text-violet-300 border-violet-700/30",
+    cardClass: DEFAULT_CARD_CLASS,
+    activeCardClass: "border-violet-500 bg-violet-500/10",
   },
 ];
 
@@ -127,28 +111,21 @@ function SensitivityCard({
   return (
     <button
       onClick={onSelect}
-      className={`relative w-full text-left p-4 rounded-xl border transition-all duration-200 cursor-pointer ${
+      className={`relative w-full text-left p-4 rounded-xl border transition-colors duration-150 cursor-pointer ${
         isActive ? level.activeCardClass : level.cardClass
       }`}
     >
       <div className="flex items-start gap-3">
-        <div
-          className={`mt-0.5 p-2 rounded-lg ${
-            isActive ? "bg-white/15" : "bg-white/5"
-          }`}
-        >
-          {level.icon}
-        </div>
         <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 mb-1">
+          <div className="flex items-center justify-between gap-2 mb-1">
             <span className="text-sm font-semibold text-white">
               {level.label}
             </span>
             <Badge
               variant="outline"
-              className={`text-[10px] px-1.5 py-0 font-medium border ${level.badgeClass}`}
+              className={`text-[9px] px-1.5 py-0 font-bold tracking-wider uppercase border ${level.badgeClass}`}
             >
-              {level.value}
+              {level.value === "off" ? "Off" : level.value}
             </Badge>
           </div>
           <p className="text-xs text-gray-400 leading-relaxed">
@@ -165,25 +142,20 @@ function SensitivityCard({
 
 function CategorySection({
   title,
-  icon,
   levels,
   currentValue,
   onSelect,
 }: {
   title: string;
-  icon: React.ReactNode;
   levels: SensitivityLevel[];
   currentValue: CensorSensitivity;
   onSelect: (v: CensorSensitivity) => void;
 }) {
   return (
     <div className="space-y-3">
-      <div className="flex items-center gap-2">
-        {icon}
-        <h3 className="text-sm font-semibold text-white uppercase tracking-wide">
-          {title}
-        </h3>
-      </div>
+      <h3 className="text-sm font-semibold text-white uppercase tracking-wide">
+        {title}
+      </h3>
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
         {levels.map((level) => (
           <SensitivityCard
@@ -236,9 +208,9 @@ export function ContentPreferencesSection() {
         nudity: tempNudity,
       });
       setSaved(true);
-      toast.success("Content preferences saved!", {
-        description: "Your settings will apply to all future video sessions.",
-        icon: <Shield className="w-4 h-4 text-orange-400" />,
+      toast.success("Content filters saved", {
+        description: "These settings will apply the next time you start a video.",
+        icon: <Shield className="w-4 h-4 text-violet-400" />,
       });
       setTimeout(() => setSaved(false), 3000);
     } catch (error) {
@@ -254,10 +226,16 @@ export function ContentPreferencesSection() {
       await updatePreferencesOnServer(defaultPrefs);
       setTempViolence("off");
       setTempNudity("off");
-      toast.info("Preferences reset to defaults.");
+      toast.info("Filters reset to off.");
     } catch (error) {
       toast.error("Failed to reset preferences on server.");
     }
+  };
+
+  const getFriendlyLabel = (value: CensorSensitivity) => {
+    if (value === "strict") return "Blur entire screen";
+    if (value === "moderate") return "Blur sensitive areas";
+    return "No filtering";
   };
 
   if (initialLoading) {
@@ -283,14 +261,6 @@ export function ContentPreferencesSection() {
                 <div className="h-24 bg-white/5 rounded-xl" />
               </div>
             </div>
-            <div className="space-y-3">
-              <div className="w-24 h-4 bg-white/10 rounded" />
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                <div className="h-24 bg-white/5 rounded-xl" />
-                <div className="h-24 bg-white/5 rounded-xl" />
-                <div className="h-24 bg-white/5 rounded-xl" />
-              </div>
-            </div>
           </CardContent>
         </Card>
       </div>
@@ -303,15 +273,15 @@ export function ContentPreferencesSection() {
       <Card className="bg-white/5 border-white/10">
         <CardHeader>
           <div className="flex items-center gap-3">
-            <div className="p-2.5 rounded-xl bg-orange-500/15 border border-orange-500/25">
-              <Shield className="w-5 h-5 text-orange-400" />
+            <div className="p-2.5 rounded-lg bg-violet-500/10 border border-violet-500/20">
+              <Shield className="w-5 h-5 text-violet-400" />
             </div>
             <div>
               <CardTitle className="text-white text-xl">
                 Content Filters
               </CardTitle>
               <p className="text-gray-400 text-sm mt-0.5">
-                Set your default sensitivity for violence and nudity in all videos.
+                Choose how violent and explicit scenes are handled by default. You can still adjust this per session from the player controls.
               </p>
             </div>
           </div>
@@ -319,24 +289,16 @@ export function ContentPreferencesSection() {
 
         <CardContent className="space-y-8">
           {/* Info banner */}
-          <div className="flex items-start gap-3 p-4 rounded-xl bg-blue-500/10 border border-blue-500/20">
-            <Info className="w-4 h-4 text-blue-400 flex-shrink-0 mt-0.5" />
-            <p className="text-xs text-blue-300/90 leading-relaxed">
-              These settings are applied automatically when you start watching a video.
-              You can also override them per-session using the{" "}
-              <span className="font-semibold text-blue-300">
-                Shield (
-                <Shield className="inline w-3 h-3 mb-0.5" />) button
-              </span>{" "}
-              inside the video player. Only videos with AI-detected content have
-              active filters.
+          <div className="flex items-start gap-3 p-4 rounded-xl bg-white/5 border border-white/10">
+            <Info className="w-4 h-4 text-gray-400 flex-shrink-0 mt-0.5" />
+            <p className="text-xs text-gray-400 leading-relaxed">
+              These settings apply automatically every time you start a video. Filtering only works on titles that have been processed for scene metadata.
             </p>
           </div>
 
           {/* Violence settings */}
           <CategorySection
-            title="Violence"
-            icon={<Swords className="w-4 h-4 text-red-400" />}
+            title="Violence & Gore"
             levels={VIOLENCE_LEVELS}
             currentValue={tempViolence}
             onSelect={setTempViolence}
@@ -347,52 +309,49 @@ export function ContentPreferencesSection() {
 
           {/* Nudity settings */}
           <CategorySection
-            title="Nudity & Sexual Content"
-            icon={<EyeOff className="w-4 h-4 text-pink-400" />}
+            title="Nudity & Mature Scenes"
             levels={NUDITY_LEVELS}
             currentValue={tempNudity}
             onSelect={setTempNudity}
           />
 
           {/* Current summary pill */}
-          <div className="flex flex-wrap gap-3 p-4 rounded-xl bg-white/5 border border-white/10">
+          <div className="flex flex-wrap gap-4 p-4 rounded-xl bg-white/5 border border-white/10">
             <span className="text-xs text-gray-400 w-full mb-1 font-medium uppercase tracking-wide">
-              Selected Settings
+              Current settings
             </span>
             <div className="flex items-center gap-2 text-sm text-white">
-              <Swords className="w-3.5 h-3.5 text-red-400" />
-              <span className="text-gray-400">Violence:</span>
+              <span className="text-gray-400">Violence filter:</span>
               <Badge
                 variant="outline"
-                className={`capitalize text-xs ${
+                className={`text-xs font-semibold ${
                   tempViolence === "strict"
                     ? "border-red-500/50 text-red-300 bg-red-900/20"
                     : tempViolence === "moderate"
-                    ? "border-amber-500/50 text-amber-300 bg-amber-900/20"
+                    ? "border-orange-500/50 text-orange-300 bg-orange-950/20"
                     : "border-zinc-500/50 text-zinc-300 bg-zinc-800/40"
                 }`}
               >
-                {tempViolence}
+                {getFriendlyLabel(tempViolence)}
               </Badge>
             </div>
             <div className="flex items-center gap-2 text-sm text-white">
-              <EyeOff className="w-3.5 h-3.5 text-pink-400" />
-              <span className="text-gray-400">Nudity:</span>
+              <span className="text-gray-400">Nudity filter:</span>
               <Badge
                 variant="outline"
-                className={`capitalize text-xs ${
+                className={`text-xs font-semibold ${
                   tempNudity === "strict"
-                    ? "border-purple-500/50 text-purple-300 bg-purple-900/20"
+                    ? "border-violet-500/50 text-violet-300 bg-violet-950/20"
                     : tempNudity === "moderate"
-                    ? "border-pink-500/50 text-pink-300 bg-pink-900/20"
+                    ? "border-pink-500/50 text-pink-300 bg-pink-950/20"
                     : "border-zinc-500/50 text-zinc-300 bg-zinc-800/40"
                 }`}
               >
-                {tempNudity}
+                {getFriendlyLabel(tempNudity)}
               </Badge>
             </div>
             {(tempViolence !== preferences.violence || tempNudity !== preferences.nudity) && (
-              <span className="text-xs text-orange-400 ml-auto flex items-center gap-1">
+              <span className="text-xs text-amber-400 ml-auto flex items-center gap-1">
                 <Info className="w-3.5 h-3.5" />
                 Unsaved changes
               </span>
@@ -404,10 +363,10 @@ export function ContentPreferencesSection() {
             <Button
               onClick={handleSave}
               disabled={isSyncing}
-              className={`flex-1 font-semibold transition-all ${
+              className={`flex-1 font-semibold transition-colors ${
                 saved
                   ? "bg-green-600 hover:bg-green-700 text-white"
-                  : "bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white shadow-lg shadow-orange-500/20"
+                  : "bg-violet-600 hover:bg-violet-700 text-white"
               }`}
             >
               {isSyncing ? (
@@ -418,12 +377,12 @@ export function ContentPreferencesSection() {
               ) : saved ? (
                 <>
                   <CheckCircle2 className="w-4 h-4 mr-2" />
-                  Saved!
+                  Settings saved
                 </>
               ) : (
                 <>
                   <Shield className="w-4 h-4 mr-2" />
-                  Save Preferences
+                  Save filters
                 </>
               )}
             </Button>
@@ -434,7 +393,7 @@ export function ContentPreferencesSection() {
               className="sm:w-auto border-white/20 text-white hover:bg-white/10"
             >
               <RotateCcw className="w-4 h-4 mr-2" />
-              Reset to Defaults
+              Reset to defaults
             </Button>
           </div>
         </CardContent>
@@ -444,47 +403,39 @@ export function ContentPreferencesSection() {
       <Card className="bg-white/5 border-white/10">
         <CardHeader>
           <CardTitle className="text-white text-base flex items-center gap-2">
-            <Info className="w-4 h-4 text-blue-400" />
-            How Content Filters Work
+            <Info className="w-4 h-4 text-gray-400" />
+            How filtering works
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-sm">
             <div className="p-4 rounded-xl bg-zinc-800/50 border border-zinc-700/50 space-y-2">
-              <div className="flex items-center gap-2 font-semibold text-zinc-200">
-                <ShieldOff className="w-4 h-4 text-zinc-400" />
-                Off
+              <div className="font-semibold text-zinc-200">
+                No filtering
               </div>
               <p className="text-xs text-zinc-400 leading-relaxed">
-                Video plays normally. A small indicator badge appears when
-                AI-detected content is present in the current scene.
+                Stream the original footage. A small overlay alert appears at the edge of the player when mature content is active.
               </p>
             </div>
-            <div className="p-4 rounded-xl bg-amber-900/20 border border-amber-700/30 space-y-2">
-              <div className="flex items-center gap-2 font-semibold text-amber-200">
-                <Shield className="w-4 h-4 text-amber-400" />
-                Moderate
+            <div className="p-4 rounded-xl bg-orange-950/20 border border-orange-700/30 space-y-2">
+              <div className="font-semibold text-orange-200">
+                Blur sensitive areas
               </div>
-              <p className="text-xs text-amber-300/70 leading-relaxed">
-                Only the specific regions detected by AI (e.g. a weapon, exposed
-                skin) are blurred using a targeted bounding-box overlay.
+              <p className="text-xs text-orange-300/70 leading-relaxed">
+                Blurring is calculated over the specific regions involved — weapon grips, blood spatter, or explicit skin areas — while the rest of the frame stays clear.
               </p>
             </div>
-            <div className="p-4 rounded-xl bg-red-900/20 border border-red-700/30 space-y-2">
-              <div className="flex items-center gap-2 font-semibold text-red-200">
-                <ShieldAlert className="w-4 h-4 text-red-400" />
-                Strict
+            <div className="p-4 rounded-xl bg-red-950/20 border border-red-700/30 space-y-2">
+              <div className="font-semibold text-red-200">
+                Blur entire screen
               </div>
               <p className="text-xs text-red-300/70 leading-relaxed">
-                The entire video frame is blurred for the duration of any
-                detected scene. Best for shared or family viewing environments.
+                The full frame is blurred during any detected sequence. Useful for shared living rooms or watching with children present.
               </p>
             </div>
           </div>
           <p className="text-xs text-gray-500">
-            Content detection is powered by our AI analysis pipeline. Filters
-            apply only to videos that have been processed and contain detection
-            data. Accuracy may vary.
+            Detection runs through our visual-recognition pipeline. Settings are saved to your account and apply across web, smart TV, and watch party sessions.
           </p>
         </CardContent>
       </Card>

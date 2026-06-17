@@ -64,7 +64,7 @@ export function useEpisodeReviewsQuery(
         sort: JSON.stringify({
           createdAt: sortOrder === "newest" ? "DESC" : "ASC",
         }),
-      });
+      } as any);
 
       const reviews = response?.data?.data || [];
       const meta = response?.data?.meta;

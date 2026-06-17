@@ -807,6 +807,7 @@ declare namespace API {
 
   type EpisodeReviewControllerGetReviewForEpisodeParams = {
     episodeId: string;
+    userId: string;
     /** Sort order for reviews */
     sort?: string;
     /** Number of items per page */
@@ -1269,6 +1270,37 @@ declare namespace API {
     message: string;
     data: RecentActivityDto[];
     meta: PaginationMeta;
+  };
+
+  type RecommendationItemDto = {
+    /** Rank of the recommendation */
+    rank: number;
+    /** Score from recommendation algorithm */
+    lgbScore: number;
+    /** Type of the content (MOVIE or TVSERIES) */
+    type: "MOVIE" | "TVSERIES";
+    /** Content object (MovieDto or TVSeriesSummaryDto) */
+    item: Record<string, any>;
+  };
+
+  type RecommendationResponseDataDto = {
+    /** List of recommended items */
+    recommendations: RecommendationItemDto[];
+    /** Total number of items */
+    total: number;
+    /** Source of recommendation data */
+    source: "ai_recommendation" | "fallback_trending";
+  };
+
+  type RecommendationResponseDataDtoResponseDto = {
+    statusCode: number;
+    message: string;
+    data: RecommendationResponseDataDto;
+  };
+
+  type RecommendationsControllerGetRecommendationsParams = {
+    /** Number of recommendations to return (default: 10) */
+    limit?: number;
   };
 
   type RegisterRequest = {

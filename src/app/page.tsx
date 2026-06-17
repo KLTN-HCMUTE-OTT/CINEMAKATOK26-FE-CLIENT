@@ -8,13 +8,13 @@ import { PricingPlans } from "@/components/pricing-plans";
 import { TopArtists } from "@/components/top-artists";
 import { TopNews } from "@/components/top-news";
 import { TvSeries } from "@/components/tv-series";
-import { RecommendedTvShows } from "@/components/recommended-tv-shows";
 import { Footer } from "@/components/footer";
 import { Header } from "@/components/header";
 import { useAuth } from "@/hooks/use-auth";
 import { TrendingMoviesList } from "@/components/trending-movies";
 import { useUIStore } from "@/store";
 import { ActiveRoomsPreview } from "@/components/watch-party/active-rooms-preview";
+import { RecommendedForYou } from "@/components/recommended-for-you";
 
 function HomeContent() {
   const searchParams = useSearchParams();
@@ -41,7 +41,7 @@ function HomeContent() {
 
       {/* Wrapper with extra spacing for carousel sections */}
       <div className="space-y-16 py-8">
-        {/* {isAuthenticated && <RecommendedTvShows />} */}
+        {isAuthenticated && <RecommendedForYou />}
         <TrendingMoviesList page={1} limit={10} />
         <ActiveRoomsPreview />
         <NewReleases />

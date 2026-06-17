@@ -109,4 +109,10 @@ export const queryKeys = {
     content: (videoId: string) =>
       [...["watchParty"], "content", videoId] as const,
   },
+
+  recommendations: {
+    all: ["recommendations"] as const,
+    list: (filters?: Record<string, unknown>) =>
+      [...queryKeys.recommendations.all, "list", filters] as const,
+  },
 } as const;
