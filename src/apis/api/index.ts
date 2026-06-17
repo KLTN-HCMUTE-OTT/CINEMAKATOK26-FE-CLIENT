@@ -7,6 +7,7 @@ import * as users from "./users";
 import * as contents from "./contents";
 import * as movies from "./movies";
 import * as news from "./news";
+import * as recommendations from "./recommendations";
 import * as tvSeries from "./tvSeries";
 import * as episodes from "./episodes";
 import * as actors from "./actors";
@@ -35,6 +36,7 @@ export default {
   contents,
   movies,
   news,
+  recommendations,
   tvSeries,
   episodes,
   actors,

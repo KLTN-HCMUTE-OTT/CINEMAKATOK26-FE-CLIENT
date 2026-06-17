@@ -91,6 +91,17 @@ export const getFriendlyErrorMessage = (
 ): string => {
   if (!err) return fallback;
 
+  // Check for 503 or Connection Refused errors
+  if (
+    err.response?.status === 503 ||
+    err.response?.data?.statusCode === 503 ||
+    err.response?.data?.error === "ServiceUnavailableException" ||
+    err.response?.data?.code === "ECONNREFUSED" ||
+    err.code === "ECONNREFUSED"
+  ) {
+    return "The video streaming service is temporarily unavailable (Connection refused). Please try again later.";
+  }
+
   // Check HTTP Status code first
   if (err.response?.status === 401) {
     return "Please sign in to watch this video.";
