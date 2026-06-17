@@ -4,6 +4,7 @@
 import { Button } from "@/components/ui/button";
 import { Play, Film, X, AlertCircle } from "lucide-react";
 import Image from "next/image";
+import { useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
 import { getS3Url } from "@/hooks/aws";
 import { ResumeDialog } from "@/components/ui/resume-dialog";
@@ -50,11 +51,13 @@ export function MovieDetailHeroVideo({
   movieId,
   videoId,
 }: MovieDetailHeroVideoProps) {
+  const router = useRouter();
   const [viewMode, setViewMode] = useState<ViewMode>("idle");
   const [selectedSource, setSelectedSource] = useState(0);
   const openLoginModal = useUIStore((s) => s.openLoginModal);
   const [pendingPlay, setPendingPlay] = useState(false);
   const [showResumeDialog, setShowResumeDialog] = useState(false);
+  const [showContentWarning, setShowContentWarning] = useState(false);
   const [videoDuration, setVideoDuration] = useState(0);
   const [skipInitialTime, setSkipInitialTime] = useState(false);
   const [videoDetails, setVideoDetails] = useState<any>(null);
@@ -91,8 +94,16 @@ export function MovieDetailHeroVideo({
     setViewMode("movie");
   };
 
-  // Handle watch movie button click - show resume dialog if has progress
+  // Handle watch movie button click - show warning if has violence/nudity
   const handleWatchMovieClick = () => {
+    if (videoDetails?.isViolent || videoDetails?.isNude) {
+      setShowContentWarning(true);
+    } else {
+      proceedToWatch();
+    }
+  };
+
+  const proceedToWatch = () => {
     if (resumeData && resumeData.watchedDuration > 0) {
       setShowResumeDialog(true);
     } else {
@@ -357,6 +368,64 @@ export function MovieDetailHeroVideo({
                 </AlertDialogAction>
               </>
             )}
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Mature Content Warning Dialog */}
+      <AlertDialog open={showContentWarning} onOpenChange={setShowContentWarning}>
+        <AlertDialogContent className="bg-zinc-950/95 border border-zinc-800 text-white backdrop-blur-md max-w-md">
+          <AlertDialogHeader className="flex flex-col items-center text-center">
+            <div className="w-12 h-12 rounded-full bg-amber-500/10 flex items-center justify-center mb-2">
+              <AlertCircle className="w-6 h-6 text-amber-500" />
+            </div>
+            <AlertDialogTitle className="text-xl font-bold tracking-tight text-white">
+              Mature Content Warning
+            </AlertDialogTitle>
+            <AlertDialogDescription className="text-zinc-400 text-sm mt-2 flex flex-col gap-3">
+              <span>
+                This video contains scenes of{" "}
+                <span className="font-semibold text-red-400">
+                  {[
+                    videoDetails?.isViolent && "violence",
+                    videoDetails?.isNude && "nudity",
+                  ]
+                    .filter(Boolean)
+                    .join(" and ")}
+                </span>
+                . Would you like to proceed?
+              </span>
+              <span className="text-xs text-zinc-500 bg-zinc-900/40 p-2.5 rounded-lg border border-zinc-800/80">
+                Tip: You can adjust or disable SafeView™ filtering settings in your
+                account settings.
+              </span>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="flex flex-col sm:flex-row gap-2 mt-4 w-full justify-end">
+            <AlertDialogAction
+              onClick={() => {
+                setShowContentWarning(false);
+                router.push("/profile/content");
+              }}
+              className="w-full sm:w-auto bg-zinc-900 hover:bg-zinc-800 text-zinc-300 border border-zinc-800 font-semibold"
+            >
+              Adjust settings
+            </AlertDialogAction>
+            <AlertDialogAction
+              onClick={() => setShowContentWarning(false)}
+              className="w-full sm:w-auto bg-zinc-900 hover:bg-zinc-800 text-zinc-300 border border-zinc-800 font-semibold"
+            >
+              Cancel
+            </AlertDialogAction>
+            <AlertDialogAction
+              onClick={() => {
+                setShowContentWarning(false);
+                proceedToWatch();
+              }}
+              className="w-full sm:w-auto bg-orange-500 hover:bg-orange-600 text-white font-semibold transition-colors"
+            >
+              Continue
+            </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

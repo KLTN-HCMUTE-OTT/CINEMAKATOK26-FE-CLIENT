@@ -11,7 +11,7 @@ const readyVideo: API.VideoDto = {
   thumbnailUrl: "https://cdn.example.com/thumb.jpg",
   sprites: [],
   vttFiles: [],
-};
+} as any;
 
 const processingVideo: API.VideoDto = { ...readyVideo, id: "vid-002", status: "PROCESSING" };
 
